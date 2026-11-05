@@ -55,7 +55,7 @@ let ERR = "";
 function showErr(e) { STAT.err = String(e && e.message || e); const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
 addEventListener("error", e => showErr(e.error || e.message));
 let GOT = 0; // time the first garden arrived
-const SPIN = {}; let NECTAR = null, BIRTH = null, JOY = -99;
+let NECTAR = null, BIRTH = null, JOY = -99;
 
 // ---------- helpers ----------
 const TAU = Math.PI * 2, INK = "#2B2A26";
@@ -361,14 +361,8 @@ function draw(now) {
   bs.forEach((b, i) => { const f = flies[i]; if (f.alpha <= .01) return;
     if (pull > 0) { const a = i * 2.4 + ft * .6, rr = H * (.06 + .03 * (i % 3)), k = pull * .9;
       f.x += (nx + Math.cos(a) * rr - f.x) * k; f.y += (ny - unitAt(.5) * 1.3 + Math.sin(a) * rr * .6 - f.y) * k; }
-    const since = SPIN[i] == null ? 99 : t - SPIN[i], spin = Math.min(1, since / .9);
-    g.save(); g.globalAlpha = f.alpha; g.translate(f.x, f.y); g.rotate(spin < 1 ? spin * TAU : f.tilt); g.translate(-f.x, -f.y);
-    butterfly(b, f.flap, f.x, f.y, (f.spot >= 0 ? m * .7 : m) * (since < 3 ? 1.35 : 1), t); g.restore();
-    if (since < 3.5 && b.n) { const a = Math.min(1, (3.5 - since) / .5); g.save(); g.globalAlpha = a;
-      g.font = `700 ${Math.round(H * .045)}px "Google Sans", Roboto, sans-serif`; g.textAlign = "center";
-      const label = b.n + (["", " 💎", " ✨", " 🏆"][b.v] || ""), tw = g.measureText(label).width;
-      g.fillStyle = "rgba(255,255,255,.92)"; const p = new Path2D(); p.roundRect(f.x - tw / 2 - 20, f.y - m * .95 - H * .05, tw + 40, H * .065, H * .03); g.fill(p);
-      g.fillStyle = INK; g.fillText(label, f.x, f.y - m * .95); g.restore(); } });
+    g.save(); g.globalAlpha = f.alpha; g.translate(f.x, f.y); g.rotate(f.tilt); g.translate(-f.x, -f.y);
+    butterfly(b, f.flap, f.x, f.y, f.spot >= 0 ? m * .7 : m, t); g.restore(); });
   if (d.pet && d.pet.name) { g.font = `600 ${Math.round(H * .04)}px "Google Sans", Roboto, sans-serif`; g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 12;
     g.fillText("🐛 " + d.pet.name + "   🦋 " + d.butterflies.length, H * .05, H * .08); g.shadowBlur = 0; }
 }
@@ -380,8 +374,7 @@ try {
   ctx.addCustomMessageListener(NS, e => {
     try {
       STAT.data++; const m = typeof e.data === "string" ? JSON.parse(e.data) : e.data, now = (performance.now() - T0) / 1000;
-      if (m.type === "spin") SPIN[m.i] = now;                                   // a butterfly tapped on the phone
-      else if (m.type === "nectar") NECTAR = { x: m.x, d: m.d, t0: m.t0 != null ? m.t0 : flightT() }; // a tap on the meadow (flight clock, as on the phone)
+      if (m.type === "nectar") NECTAR = { x: m.x, d: m.d, t0: m.t0 != null ? m.t0 : flightT() }; // a tap on the meadow (flight clock, as on the phone)
       else if (m.type === "pet") JOY = now;                                     // the pet on the perch was tapped
       else if (m.type === "birth") BIRTH = { b: m.b, t: now };                  // relive a birth from the album
       else { DATA = m; if (!GOT) GOT = now; }

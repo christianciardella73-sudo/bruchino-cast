@@ -11,7 +11,7 @@
   var STAT = { err: "", frames: 0, data: 0 };
   window.onerror = function (msg, src, line) { STAT.err = msg + " @" + line; };
   setInterval(function () {
-    var el = document.getElementById("st"); if (!el) return;
+    var el = document.getElementById("st"); if (!el || !STAT.err) return; // shown only when something is wrong
     el.textContent = "v3 · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
       " · frames " + STAT.frames + " · data " + STAT.data + " · canvas " + (STAT.cv || "?") + " · px " + (STAT.px || "?") + (STAT.err ? " · ERR " + STAT.err : "");
   }, 1000);
@@ -30,7 +30,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="err"></div>
-<div id="st">v3 · starting…</div>
+<div id="st"></div>
 <script>
 "use strict";
 const NS = "urn:x-cast:cloud.shazam.bruchino";

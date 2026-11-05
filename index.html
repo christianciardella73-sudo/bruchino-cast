@@ -6,6 +6,16 @@
 <title>Bruchino Garden</title>
 <!-- Bruchino on the TV: the user's garden, sent by the phone app over Cast (namespace urn:x-cast:cloud.shazam.bruchino).
      Same rules as the app's Garden.kt: free flight, visits to the decorations, resting, shelters. -->
+<script>
+  // Plain old JavaScript on purpose: works on any Chromecast and catches errors of the scripts below.
+  var STAT = { err: "", frames: 0, data: 0 };
+  window.onerror = function (msg, src, line) { STAT.err = msg + " @" + line; };
+  setInterval(function () {
+    var el = document.getElementById("st"); if (!el) return;
+    el.textContent = "v3 · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
+      " · frames " + STAT.frames + " · data " + STAT.data + (STAT.err ? " · ERR " + STAT.err : "");
+  }, 1000);
+</script>
 <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #0b1630; overflow: hidden; }
@@ -13,12 +23,14 @@
   /* the Cast framework adds its own full-screen (black) media player: we do not play media */
   cast-media-player { display: none !important; }
   /* diagnostics: if drawing fails on the TV, the error is written here in small */
+  #st { z-index: 13; position: fixed; right: 14px; bottom: 10px; color: #fff; font: 16px monospace; text-shadow: 0 1px 3px #000; opacity: .8; }
   #err { z-index: 12; position: fixed; left: 12px; bottom: 10px; color: #ffeb3b; font: 18px monospace; text-shadow: 0 1px 3px #000; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="err"></div>
+<div id="st">v3 · starting…</div>
 <script>
 "use strict";
 const NS = "urn:x-cast:cloud.shazam.bruchino";
@@ -33,13 +45,13 @@ let W = 1920, H = 1080, DATA = null, T0 = performance.now();
 function resize() {
   const w = innerWidth || document.documentElement.clientWidth || screen.width || 1920;
   const h = innerHeight || document.documentElement.clientHeight || screen.height || 1080;
-  const r = Math.min(window.devicePixelRatio || 1, 2);
+  const r = Math.min(window.devicePixelRatio || 1, 1920 / w, 1080 / h, 2); // never bigger than 1080p: TV GPUs are small
   if (w === W && h === H && cv.width === Math.round(w * r)) return;
   W = w; H = h; cv.width = Math.round(W * r); cv.height = Math.round(H * r); g.setTransform(r, 0, 0, r, 0, 0);
 }
 addEventListener("resize", resize); W = 0; resize();
 let ERR = "";
-function showErr(e) { const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
+function showErr(e) { STAT.err = String(e && e.message || e); const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
 addEventListener("error", e => showErr(e.error || e.message));
 let GOT = 0; // time the first garden arrived
 
@@ -225,6 +237,7 @@ function fly(i, seed, t, sp, n, depth = 0) {
 function frame(now) {
   requestAnimationFrame(frame); // keep going even if one frame fails
   try {
+    STAT.frames++;
     resize();
     const t = (now - T0) / 1000;
     // splash for at least 3 s and until the phone has sent the garden, then a 1.2 s cross-fade
@@ -279,7 +292,7 @@ requestAnimationFrame(frame);
 try {
   const ctx = cast.framework.CastReceiverContext.getInstance();
   ctx.addCustomMessageListener(NS, e => {
-    try { DATA = typeof e.data === "string" ? JSON.parse(e.data) : e.data; if (!GOT) GOT = (performance.now() - T0) / 1000; } catch (err) { showErr(err); }
+    try { STAT.data++; DATA = typeof e.data === "string" ? JSON.parse(e.data) : e.data; if (!GOT) GOT = (performance.now() - T0) / 1000; } catch (err) { showErr(err); }
   });
   const opts = new cast.framework.CastReceiverOptions(); opts.disableIdleTimeout = true; opts.skipPlayersLoad = true;
   ctx.start(opts);

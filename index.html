@@ -13,7 +13,7 @@
   setInterval(function () {
     var el = document.getElementById("st"); if (!el) return;
     el.textContent = "v3 · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
-      " · frames " + STAT.frames + " · data " + STAT.data + (STAT.err ? " · ERR " + STAT.err : "");
+      " · frames " + STAT.frames + " · data " + STAT.data + " · canvas " + (STAT.cv || "?") + " · px " + (STAT.px || "?") + (STAT.err ? " · ERR " + STAT.err : "");
   }, 1000);
 </script>
 <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
@@ -34,7 +34,7 @@
 <script>
 "use strict";
 const NS = "urn:x-cast:cloud.shazam.bruchino";
-const cv = document.getElementById("c"), g = cv.getContext("2d");
+const cv = document.getElementById("c"), g = cv.getContext("2d", { alpha: false });
 // older Chromecasts: no roundRect on paths
 if (!Path2D.prototype.roundRect) Path2D.prototype.roundRect = function (x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
@@ -45,7 +45,8 @@ let W = 1920, H = 1080, DATA = null, T0 = performance.now();
 function resize() {
   const w = innerWidth || document.documentElement.clientWidth || screen.width || 1920;
   const h = innerHeight || document.documentElement.clientHeight || screen.height || 1080;
-  const r = Math.min(window.devicePixelRatio || 1, 1920 / w, 1080 / h, 2); // never bigger than 1080p: TV GPUs are small
+  // 1 canvas pixel per CSS pixel: a Chromecast at 959x539 dpr 2 drew a doubled canvas but never showed it
+  const r = 1;
   if (w === W && h === H && cv.width === Math.round(w * r)) return;
   W = w; H = h; cv.width = Math.round(W * r); cv.height = Math.round(H * r); g.setTransform(r, 0, 0, r, 0, 0);
 }
@@ -244,6 +245,10 @@ function frame(now) {
     const fade = GOT ? Math.min(1, Math.max(0, (t - Math.max(3, GOT)) / 1.2)) : 0;
     if (fade > 0) draw(now);
     if (fade < 1) { g.save(); g.globalAlpha = 1 - fade; splash(t); g.restore(); }
+    if (STAT.frames % 60 === 1) { // what the canvas really holds (sample near the top-left)
+      STAT.cv = cv.width + "x" + cv.height + " css " + cv.clientWidth + "x" + cv.clientHeight;
+      const d = g.getImageData(20, 20, 1, 1).data; STAT.px = d[0] + "," + d[1] + "," + d[2];
+    }
   } catch (e) { showErr(e); }
 }
 

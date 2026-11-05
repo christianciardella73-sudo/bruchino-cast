@@ -55,7 +55,7 @@ let ERR = "";
 function showErr(e) { STAT.err = String(e && e.message || e); const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
 addEventListener("error", e => showErr(e.error || e.message));
 let GOT = 0; // time the first garden arrived
-const SPIN = {}; let NECTAR = null, BIRTH = null;
+const SPIN = {}; let NECTAR = null, BIRTH = null, JOY = -99;
 
 // ---------- helpers ----------
 const TAU = Math.PI * 2, INK = "#2B2A26";
@@ -170,7 +170,11 @@ function deco(id, x, y, u, t, ss, busy, pet) {
   if (id === "perch") {
     rect(x - u * .07, y - u * 1.15, u * .14, u * 1.15, "#8D6E63", u * .05);
     const lp = new Path2D(); lp.moveTo(x - u * .6, y - u * 1.1); lp.quadraticCurveTo(x, y - u * 1.55, x + u * .6, y - u * 1.1); lp.quadraticCurveTo(x, y - u * .95, x - u * .6, y - u * 1.1); fillStroke(lp, grad(y - u * 1.4, y - u, "#66BB6A"), lw);
-    if (pet) larva(pet, x, y - u * 1.2, u * .55, t);
+    // tapped on the phone: two happy hops and hearts (same as Garden.kt)
+    const j = t - JOY, hop = j >= 0 && j < 1.6 ? Math.abs(Math.sin(j / .8 * Math.PI)) * u * .45 * (1 - j / 1.6) : 0;
+    if (pet && j >= 0 && j < 2.6) for (let k = 0; k < 6; k++) { const a = j - k * .22; if (a < 0 || a > 1.6) continue;
+      heart(x + Math.sin(k * 2.1 + a * 3) * u * .45, y - u * 2.3 - a * u * 1.3, u * .2, `rgba(255,82,119,${1 - a / 1.6})`); }
+    if (pet) larva(pet, x, y - u * 1.2 - hop, u * .55, t);
   } else if (id === "house") {
     rect(x - u * .08, y - u * 1.05, u * .16, u * 1.05, "#8D6E63", u * .04);
     const tx = x - u * .6, ty = y - u * 2.05; rect(tx, ty, u * 1.2, u * 1.05, "#FFCC80");
@@ -214,6 +218,8 @@ function deco(id, x, y, u, t, ss, busy, pet) {
   }
 }
 
+function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, y - r * .2, r * .55, 0, TAU); g.arc(x + r * .45, y - r * .2, r * .55, 0, TAU); g.fill();
+  g.beginPath(); g.moveTo(x - r * .98, y - r * .05); g.lineTo(x + r * .98, y - r * .05); g.lineTo(x, y + r * .95); g.fill(); }
 // the current caterpillar (or egg / cocoon), small, on the perch
 function larva(p, x, base, u, t) {
   if (p.stage === "EGG") { fillStroke(oval(x, base - u * .7, u * .5, u * .7), grad(base - u * 1.4, base, hex(p.eggColor)), u * .06); return; }
@@ -343,8 +349,9 @@ function draw(now) {
   const m = H * .11;
   // nectar: a flower blooms where the user tapped and the butterflies gather round it for a while
   let pull = 0, nx = 0, ny = 0;
-  if (NECTAR) { const age = t - NECTAR.t; if (age > 14) NECTAR = null; else {
-    nx = NECTAR.x * W; ny = groundY(Math.min(1, Math.max(0, (NECTAR.y - .62) / .3)));
+  if (NECTAR) { let age = ((ft - NECTAR.t0) % FLIGHT_LOOP + FLIGHT_LOOP) % FLIGHT_LOOP; if (age > FLIGHT_LOOP / 2) age -= FLIGHT_LOOP;
+    if (age > 14) NECTAR = null; else {
+    nx = NECTAR.x * W; ny = groundY(Math.min(1, Math.max(0, NECTAR.d || 0)));
     pull = ease(age / 2.5) * (1 - ease((age - 11) / 3));
     const gr = ease(age / .8), u = unitAt(.5);
     g.strokeStyle = "#3E8E2E"; g.lineWidth = u * .08; g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx, ny - u * 1.1 * gr); g.stroke();
@@ -352,7 +359,7 @@ function draw(now) {
     g.fillStyle = gl; g.beginPath(); g.arc(nx, ny - u * 1.1 * gr, u * 1.4, 0, TAU); g.fill();
     flower(nx, ny - u * 1.1 * gr, u * .22 * gr, "#F48FB1"); } }
   bs.forEach((b, i) => { const f = flies[i]; if (f.alpha <= .01) return;
-    if (pull > 0) { const a = i * 2.4 + t * .6, rr = H * (.06 + .03 * (i % 3)), k = pull * .9;
+    if (pull > 0) { const a = i * 2.4 + ft * .6, rr = H * (.06 + .03 * (i % 3)), k = pull * .9;
       f.x += (nx + Math.cos(a) * rr - f.x) * k; f.y += (ny - unitAt(.5) * 1.3 + Math.sin(a) * rr * .6 - f.y) * k; }
     const since = SPIN[i] == null ? 99 : t - SPIN[i], spin = Math.min(1, since / .9);
     g.save(); g.globalAlpha = f.alpha; g.translate(f.x, f.y); g.rotate(spin < 1 ? spin * TAU : f.tilt); g.translate(-f.x, -f.y);
@@ -374,7 +381,8 @@ try {
     try {
       STAT.data++; const m = typeof e.data === "string" ? JSON.parse(e.data) : e.data, now = (performance.now() - T0) / 1000;
       if (m.type === "spin") SPIN[m.i] = now;                                   // a butterfly tapped on the phone
-      else if (m.type === "nectar") NECTAR = { x: m.x, y: m.y, t: now };        // a tap on the meadow
+      else if (m.type === "nectar") NECTAR = { x: m.x, d: m.d, t0: m.t0 != null ? m.t0 : flightT() }; // a tap on the meadow (flight clock, as on the phone)
+      else if (m.type === "pet") JOY = now;                                     // the pet on the perch was tapped
       else if (m.type === "birth") BIRTH = { b: m.b, t: now };                  // relive a birth from the album
       else { DATA = m; if (!GOT) GOT = now; }
     } catch (err) { showErr(err); }

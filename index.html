@@ -55,6 +55,7 @@ let ERR = "";
 function showErr(e) { STAT.err = String(e && e.message || e); const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
 addEventListener("error", e => showErr(e.error || e.message));
 let GOT = 0; // time the first garden arrived
+const SPIN = {}; let NECTAR = null, BIRTH = null;
 
 // ---------- helpers ----------
 const TAU = Math.PI * 2, INK = "#2B2A26";
@@ -95,16 +96,16 @@ function meadow(t, night, hour, ss) {
   hill(H * .63, H * .03, 2, night ? "#1B3322" : "#86C26B", 2.1);
   hill(H * .71, H * .012, 4, night ? "#16301B" : "#6DB33F", 2.6);
   const r = rng(11);
-  for (let i = 0; i < 220; i++) { const x = r() * W, y = H * (.74 + r() * .25), st = H * (.025 + r() * .035), bend = Math.sin(t * 1.4 + i) * H * .008;
+  for (let i = 0; i < 80; i++) { const x = r() * W, y = H * (.74 + r() * .25), st = H * (.025 + r() * .035), bend = Math.sin(t * 1.4 + i) * H * .008;
     g.strokeStyle = night ? "#2E5A2E" : "#3E8E2E"; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + bend, y - st); g.stroke();
-    if (i % 3) flower(x + bend, y - st, H * .006, night ? "#7d7da0" : ["#ffffff", "#FFEB3B", "#F48FB1", "#CE93D8", "#FF8A65"][i % 5]); }
+    if (i % 3 === 0) flower(x + bend, y - st, H * .006, night ? "#7d7da0" : ["#ffffff", "#FFEB3B", "#F48FB1", "#CE93D8", "#FF8A65"][i % 5]); }
   // the season drifting down
   const fr = rng(99);
-  for (let i = 0; i < 40; i++) { const x0 = fr() * W, sp = .035 + fr() * .05, ph = fr(), y = ((t * sp + ph) % 1) * (H * .85), x = x0 + Math.sin(t * .9 + i) * H * .04;
+  for (let i = 0; i < 12; i++) { const x0 = fr() * W, sp = .035 + fr() * .05, ph = fr(), y = ((t * sp + ph) % 1) * (H * .85), x = x0 + Math.sin(t * .9 + i) * H * .04;
     g.save(); g.translate(x, y); g.rotate(t * .8 + i);
     if (ss === "winter") { g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(0, 0, 4, 0, TAU); g.fill(); }
     else if (ss === "spring") { g.fillStyle = "#F8BBD0"; g.beginPath(); g.ellipse(0, 0, 9, 4.5, 0, 0, TAU); g.fill(); }
-    else if (ss === "autumn") { g.fillStyle = ["#E65100", "#FF8F00", "#C62828"][i % 3]; g.beginPath(); g.ellipse(0, 0, 12, 6, 0, 0, TAU); g.fill(); }
+    else if (ss === "autumn") { g.fillStyle = ["#E65100", "#FF8F00", "#C62828"][i % 3]; g.beginPath(); g.ellipse(0, 0, 9, 4.5, 0, 0, TAU); g.fill(); }
     else { g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = 1.2; for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(k * 1.05) * 9, Math.sin(k * 1.05) * 9); g.stroke(); } }
     g.restore(); }
   if (night) { const ff = rng(5); for (let k = 0; k < 14; k++) { const ax = ff() * TAU, ay = ff() * TAU, x = W * (.5 + .47 * Math.sin(t * .15 + ax)), y = H * (.45 + .4 * (.5 + .5 * Math.sin(t * .25 + ay))), gl = Math.pow((Math.sin(t * 3 + k * 2) + 1) / 2, 2);
@@ -245,11 +246,56 @@ function frame(now) {
     const fade = GOT ? Math.min(1, Math.max(0, (t - Math.max(3, GOT)) / 1.2)) : 0;
     if (fade > 0) draw(now);
     if (fade < 1) { g.save(); g.globalAlpha = 1 - fade; splash(t); g.restore(); }
+    if (BIRTH) { const age = t - BIRTH.t; if (age > 11) BIRTH = null; else { g.save(); g.globalAlpha = Math.min(1, age / .6, (11 - age) / .8); birth(BIRTH.b, age, t); g.restore(); } }
     if (STAT.frames % 60 === 1) { // what the canvas really holds (sample near the top-left)
       STAT.cv = cv.width + "x" + cv.height + " css " + cv.clientWidth + "x" + cv.clientHeight;
       const d = g.getImageData(20, 20, 1, 1).data; STAT.px = d[0] + "," + d[1] + "," + d[2];
     }
   } catch (e) { showErr(e); }
+}
+
+// ---------- relive a birth (sent from the album) ----------
+function birth(b, a, t) {
+  const cx = W / 2, cy = H * .45, m = H * .42, wc = hex(b.w1), love = Math.min(1, (b.bond || 0) / 100);
+  const split = 2.3, fly0 = 3.8, land = 5.8, dawn = ease((a - split) / 3);
+  const sg = g.createLinearGradient(0, 0, 0, H); sg.addColorStop(0, mix("#070B1E", "#3A3478", dawn)); sg.addColorStop(.7, mix("#22163F", "#FF9E6B", dawn)); sg.addColorStop(1, mix("#141236", "#FFD9A0", dawn));
+  g.fillStyle = sg; g.fillRect(0, 0, W, H);
+  const r = rng(42); for (let i = 0; i < 90; i++) { const tw = (Math.sin(t * 2 + i) + 1) / 2; g.fillStyle = `rgba(255,255,255,${(.2 + .7 * tw) * (1 - dawn)})`; g.beginPath(); g.arc(r() * W, r() * H * .8, 1 + 1.6 * tw, 0, TAU); g.fill(); }
+  // light and rays
+  const beat = [.6, 1.3, 1.9].reduce((s, k) => s + (a >= k ? Math.exp(-(a - k) * 6) : 0), 0), inner = Math.min(1, a / split);
+  const gl = g.createRadialGradient(cx, cy, 0, cx, cy, m * (1 + .4 * beat)); gl.addColorStop(0, mix(wc, "#ffffff", .4)); gl.addColorStop(1, "rgba(0,0,0,0)");
+  g.globalAlpha *= 1; g.save(); g.globalAlpha *= .35 + .4 * inner + .2 * beat; g.fillStyle = gl; g.fillRect(0, 0, W, H); g.restore();
+  if (a > land) { const ra = ease((a - land) / .8); g.save(); g.translate(cx, cy); g.rotate(t * .15);
+    for (let k = 0; k < 16; k++) { const a0 = k * TAU / 16; g.fillStyle = `rgba(255,236,179,${.18 * ra})`; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a0 - .09) * W, Math.sin(a0 - .09) * W); g.lineTo(Math.cos(a0 + .09) * W, Math.sin(a0 + .09) * W); g.fill(); } g.restore(); }
+  // the cocoon: beats, shakes, splits
+  const open = Math.min(1, Math.max(0, (a - split) / 1.2));
+  if (open < 1) for (const side of [-1, 1]) { g.save(); const fall = open * open; g.translate(cx + side * open * m * .5, cy + fall * H * .7); g.rotate(side * fall * 1.2 + Math.sin(a * 40) * .03 * (a > 1.8 && a < split ? 1 : 0));
+    g.beginPath(); g.rect(side < 0 ? -m : 0, -m, m, 2 * m); g.clip(); const sc = 1 + .07 * beat;
+    const c = new Path2D(); c.ellipse(0, 0, m * .17 * sc, m * .36, 0, 0, TAU); fillStroke(c, grad(-m * .36, m * .36, mix("#B08968", wc, .3 * inner)), m * .012);
+    g.globalAlpha *= .6 * inner; g.fillStyle = wc; g.fill(c); g.restore(); }
+  if (a > split && a < split + .5) { g.fillStyle = `rgba(255,255,255,${.85 * (1 - (a - split) / .5)})`; g.fillRect(0, 0, W, H); }
+  // the butterfly: unfolds, flies a loop, lands
+  if (a > split) {
+    const unfold = ease((a - split - .2) / 1.4), grow = .45 + .55 * ease((a - split) / 1.4);
+    let x = cx, y = cy, flap = .08 + .92 * unfold * (.75 + .25 * Math.abs(Math.cos((a - split) * 2.5)));
+    if (a > fly0) { const e = ease((a - fly0) / (land - fly0)); x = cx + Math.sin(e * TAU) * W * .3; y = cy - Math.sin(e * TAU * 2) * H * .18;
+      flap = a < land ? .3 + .7 * Math.abs(Math.cos(t * 11)) : .55 + .45 * Math.abs(Math.cos(t * 5));
+      for (let k = 1; k <= 24; k++) { const tk = a - k * .03; if (tk < fly0 || tk > land) continue; const ek = ease((tk - fly0) / (land - fly0)), q = 1 - k / 24;
+        if (love >= .4 && k % 5 === 2) { g.fillStyle = `rgba(255,82,119,${q})`; g.font = `${Math.round(H * .03)}px sans-serif`; g.fillText("❤", cx + Math.sin(ek * TAU) * W * .3, cy - Math.sin(ek * TAU * 2) * H * .18); }
+        else { g.fillStyle = `rgba(255,255,255,${.7 * q})`; g.beginPath(); g.arc(cx + Math.sin(ek * TAU) * W * .3, cy - Math.sin(ek * TAU * 2) * H * .18, H * .006 * (1 + q), 0, TAU); g.fill(); } } }
+    if (a > land) y += Math.sin((a - land) * 2) * H * .015;
+    butterfly(b, flap, x, y, m * grow, t);
+  }
+  // confetti at the landing, more for rarer butterflies
+  if (a > land) { const pr = rng(b.seed + 3), n = [40, 60, 80, 90][b.v] || 40, d = a - land, cols = [wc, hex(b.w2), "#ffffff", "#FFD54F"];
+    for (let i = 0; i < n; i++) { const an = pr() * TAU, v = H * (.5 + pr() * .9), col = cols[i % 4], k = (1 - Math.exp(-2.2 * d)) / 2.2;
+      const px = cx + Math.cos(an) * v * k, py = cy + (Math.sin(an) * v - H * .4) * k + .5 * H * .5 * d * d; if (py > H) continue;
+      g.save(); g.translate(px, py); g.rotate(d * (pr() - .5) * 12); g.fillStyle = col; g.globalAlpha *= Math.max(0, 1 - d / 4); g.fillRect(-7, -3.5, 14, 7); g.restore(); } }
+  // caption
+  if (a > land + .3) { const ca = Math.min(1, (a - land - .3) / .6); g.save(); g.globalAlpha *= ca; g.textAlign = "center"; g.fillStyle = "#fff"; g.shadowColor = mix(wc, "#000000", .3); g.shadowBlur = 24;
+    g.font = `700 ${Math.round(H * .09)}px Georgia, serif`; g.fillText("🦋 " + b.n + (["", " 💎", " ✨", " 🏆"][b.v] || "") + (b.bond >= 100 ? " 💞" : ""), cx, H * .86);
+    g.shadowBlur = 8; g.font = `500 ${Math.round(H * .04)}px "Google Sans", Roboto, sans-serif`;
+    const hearts = "❤".repeat(Math.ceil((b.bond || 0) / 20)); g.fillText((b.parent ? "🐛 " + b.parent + "   " : "") + hearts, cx, H * .94); g.restore(); }
 }
 
 // ---------- splash ----------
@@ -286,8 +332,27 @@ function draw(now) {
   const busy = new Set(flies.filter(f => f.spot >= 0).map(f => sp[f.spot].deco));
   laid.forEach((l, i) => deco(l.p.id, l.x, l.y, l.u, t, ss, busy.has(i), d.pet));
   const m = H * .11;
-  bs.forEach((b, i) => { const f = flies[i]; if (f.alpha <= .01) return; g.save(); g.globalAlpha = f.alpha; g.translate(f.x, f.y); g.rotate(f.tilt); g.translate(-f.x, -f.y);
-    butterfly(b, f.flap, f.x, f.y, f.spot >= 0 ? m * .7 : m, t); g.restore(); });
+  // nectar: a flower blooms where the user tapped and the butterflies gather round it for a while
+  let pull = 0, nx = 0, ny = 0;
+  if (NECTAR) { const age = t - NECTAR.t; if (age > 14) NECTAR = null; else {
+    nx = NECTAR.x * W; ny = groundY(Math.min(1, Math.max(0, (NECTAR.y - .62) / .3)));
+    pull = ease(age / 2.5) * (1 - ease((age - 11) / 3));
+    const gr = ease(age / .8), u = unitAt(.5);
+    g.strokeStyle = "#3E8E2E"; g.lineWidth = u * .08; g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx, ny - u * 1.1 * gr); g.stroke();
+    const gl = g.createRadialGradient(nx, ny - u * 1.1 * gr, 0, nx, ny - u * 1.1 * gr, u * 1.4); gl.addColorStop(0, "rgba(255,245,157,.6)"); gl.addColorStop(1, "rgba(255,245,157,0)");
+    g.fillStyle = gl; g.beginPath(); g.arc(nx, ny - u * 1.1 * gr, u * 1.4, 0, TAU); g.fill();
+    flower(nx, ny - u * 1.1 * gr, u * .22 * gr, "#F48FB1"); } }
+  bs.forEach((b, i) => { const f = flies[i]; if (f.alpha <= .01) return;
+    if (pull > 0) { const a = i * 2.4 + t * .6, rr = H * (.06 + .03 * (i % 3)), k = pull * .9;
+      f.x += (nx + Math.cos(a) * rr - f.x) * k; f.y += (ny - unitAt(.5) * 1.3 + Math.sin(a) * rr * .6 - f.y) * k; }
+    const since = SPIN[i] == null ? 99 : t - SPIN[i], spin = Math.min(1, since / .9);
+    g.save(); g.globalAlpha = f.alpha; g.translate(f.x, f.y); g.rotate(spin < 1 ? spin * TAU : f.tilt); g.translate(-f.x, -f.y);
+    butterfly(b, f.flap, f.x, f.y, (f.spot >= 0 ? m * .7 : m) * (since < 3 ? 1.35 : 1), t); g.restore();
+    if (since < 3.5 && b.n) { const a = Math.min(1, (3.5 - since) / .5); g.save(); g.globalAlpha = a;
+      g.font = `700 ${Math.round(H * .045)}px "Google Sans", Roboto, sans-serif`; g.textAlign = "center";
+      const label = b.n + (["", " 💎", " ✨", " 🏆"][b.v] || ""), tw = g.measureText(label).width;
+      g.fillStyle = "rgba(255,255,255,.92)"; const p = new Path2D(); p.roundRect(f.x - tw / 2 - 20, f.y - m * .95 - H * .05, tw + 40, H * .065, H * .03); g.fill(p);
+      g.fillStyle = INK; g.fillText(label, f.x, f.y - m * .95); g.restore(); } });
   if (d.pet && d.pet.name) { g.font = `600 ${Math.round(H * .04)}px "Google Sans", Roboto, sans-serif`; g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 12;
     g.fillText("🐛 " + d.pet.name + "   🦋 " + d.butterflies.length, H * .05, H * .08); g.shadowBlur = 0; }
 }
@@ -297,7 +362,13 @@ requestAnimationFrame(frame);
 try {
   const ctx = cast.framework.CastReceiverContext.getInstance();
   ctx.addCustomMessageListener(NS, e => {
-    try { STAT.data++; DATA = typeof e.data === "string" ? JSON.parse(e.data) : e.data; if (!GOT) GOT = (performance.now() - T0) / 1000; } catch (err) { showErr(err); }
+    try {
+      STAT.data++; const m = typeof e.data === "string" ? JSON.parse(e.data) : e.data, now = (performance.now() - T0) / 1000;
+      if (m.type === "spin") SPIN[m.i] = now;                                   // a butterfly tapped on the phone
+      else if (m.type === "nectar") NECTAR = { x: m.x, y: m.y, t: now };        // a tap on the meadow
+      else if (m.type === "birth") BIRTH = { b: m.b, t: now };                  // relive a birth from the album
+      else { DATA = m; if (!GOT) GOT = now; }
+    } catch (err) { showErr(err); }
   });
   const opts = new cast.framework.CastReceiverOptions(); opts.disableIdleTimeout = true; opts.skipPlayersLoad = true;
   ctx.start(opts);

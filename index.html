@@ -12,13 +12,13 @@
   canvas { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 10; }
   /* the Cast framework adds its own full-screen (black) media player: we do not play media */
   cast-media-player { display: none !important; }
-  #wait { z-index: 11; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff;
-          font: 600 42px/1.3 "Google Sans", Roboto, sans-serif; text-shadow: 0 2px 12px #0008; text-align: center; pointer-events: none; }
+  /* diagnostics: if drawing fails on the TV, the error is written here in small */
+  #err { z-index: 12; position: fixed; left: 12px; bottom: 10px; color: #ffeb3b; font: 18px monospace; text-shadow: 0 1px 3px #000; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="wait">🐛 Bruchino Garden</div>
+<div id="err"></div>
 <script>
 "use strict";
 const NS = "urn:x-cast:cloud.shazam.bruchino";
@@ -29,8 +29,19 @@ if (!Path2D.prototype.roundRect) Path2D.prototype.roundRect = function (x, y, w,
   this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
 };
 let W = 1920, H = 1080, DATA = null, T0 = performance.now();
-function resize() { const r = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * r; cv.height = H * r; g.setTransform(r, 0, 0, r, 0, 0); }
-addEventListener("resize", resize); resize();
+// Chromecasts can report a 0×0 window at start-up: check the size every frame and fall back to 1080p
+function resize() {
+  const w = innerWidth || document.documentElement.clientWidth || screen.width || 1920;
+  const h = innerHeight || document.documentElement.clientHeight || screen.height || 1080;
+  const r = Math.min(window.devicePixelRatio || 1, 2);
+  if (w === W && h === H && cv.width === Math.round(w * r)) return;
+  W = w; H = h; cv.width = Math.round(W * r); cv.height = Math.round(H * r); g.setTransform(r, 0, 0, r, 0, 0);
+}
+addEventListener("resize", resize); W = 0; resize();
+let ERR = "";
+function showErr(e) { const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
+addEventListener("error", e => showErr(e.error || e.message));
+let GOT = 0; // time the first garden arrived
 
 // ---------- helpers ----------
 const TAU = Math.PI * 2, INK = "#2B2A26";
@@ -213,7 +224,39 @@ function fly(i, seed, t, sp, n, depth = 0) {
 
 function frame(now) {
   requestAnimationFrame(frame); // keep going even if one frame fails
-  try { draw(now); } catch (e) { console.error(e); }
+  try {
+    resize();
+    const t = (now - T0) / 1000;
+    // splash for at least 3 s and until the phone has sent the garden, then a 1.2 s cross-fade
+    const fade = GOT ? Math.min(1, Math.max(0, (t - Math.max(3, GOT)) / 1.2)) : 0;
+    if (fade > 0) draw(now);
+    if (fade < 1) { g.save(); g.globalAlpha = 1 - fade; splash(t); g.restore(); }
+  } catch (e) { showErr(e); }
+}
+
+// ---------- splash ----------
+function splash(t) {
+  const sg = g.createLinearGradient(0, 0, 0, H); sg.addColorStop(0, "#5D6BC4"); sg.addColorStop(.6, "#FFB48A"); sg.addColorStop(1, "#FFE6C4");
+  g.fillStyle = sg; g.fillRect(0, 0, W, H);
+  const sx = W * .5, sy = H * .62, rg = g.createRadialGradient(sx, sy, 0, sx, sy, H * .6); rg.addColorStop(0, "rgba(255,245,157,.8)"); rg.addColorStop(1, "rgba(255,245,157,0)");
+  g.fillStyle = rg; g.fillRect(0, 0, W, H);
+  g.fillStyle = "#FFB74D"; g.beginPath(); g.arc(sx, sy, H * .09, 0, TAU); g.fill();
+  const hill = (y0, amp, ph, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += W / 60) g.lineTo(x, y0 + Math.sin(x / W * TAU * 1.5 + ph) * amp); g.lineTo(W, H); g.fill(); };
+  hill(H * .66, H * .03, .5, "#8FA88A"); hill(H * .74, H * .025, 2, "#5E9A45"); hill(H * .82, H * .015, 4, "#4E8A2E");
+  // a caterpillar crawling across
+  const pet = { stage: "LARVA", level: 1, body: 0x7CB342, body2: 0x558B2F, antenna: 0xF5A623 };
+  const cx = ((t * .09) % 1.3 - .15) * W; larva(pet, cx, H * .84, H * .09, t * 1.4);
+  // a few butterflies
+  const cols = [[0xF5A623, 0xFFD27A, 0x5A3A12], [0x5BB8F5, 0xB9E3FF, 0x16405E], [0xAB47BC, 0x4FC3F7, 0xFFEB3B], [0xFF7F50, 0xFFC1A8, 0x7A2E12]];
+  cols.forEach((c, i) => { const x = W * (.5 + .38 * Math.sin(t * (.18 + i * .05) + i * 1.7)), y = H * (.3 + .12 * Math.sin(t * (.4 + i * .1) + i));
+    butterfly({ s: i === 2 ? 7 : i, seed: 40 + i * 9, v: 0, w1: c[0], w2: c[1], a: c[2] }, .45 + .55 * Math.abs(Math.cos(t * 6 + i)), x, y, H * .1, t); });
+  // title
+  const a = Math.min(1, t / 1.2), sz = Math.round(H * .11);
+  g.save(); g.globalAlpha *= a; g.textAlign = "center"; g.font = `700 ${sz}px Georgia, "Times New Roman", serif`;
+  g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 18; g.fillStyle = "#fff"; g.fillText("Bruchino Garden", W / 2, H * .2 + (1 - a) * 30);
+  g.shadowBlur = 0; g.font = `500 ${Math.round(H * .035)}px "Google Sans", Roboto, sans-serif`; g.fillStyle = "rgba(255,255,255,.9)";
+  const dots = ".".repeat(1 + Math.floor(t * 2) % 3); g.fillText(GOT ? "🦋" : "🐛 " + dots, W / 2, H * .28);
+  g.restore();
 }
 function draw(now) {
   const t = (now - T0) / 1000, d = DATA || { butterflies: [], decos: [{ id: "perch", x: .5, y: .5 }], pet: null };
@@ -235,7 +278,9 @@ requestAnimationFrame(frame);
 // ---------- Cast ----------
 try {
   const ctx = cast.framework.CastReceiverContext.getInstance();
-  ctx.addCustomMessageListener(NS, e => { DATA = typeof e.data === "string" ? JSON.parse(e.data) : e.data; document.getElementById("wait").style.display = "none"; });
+  ctx.addCustomMessageListener(NS, e => {
+    try { DATA = typeof e.data === "string" ? JSON.parse(e.data) : e.data; if (!GOT) GOT = (performance.now() - T0) / 1000; } catch (err) { showErr(err); }
+  });
   const opts = new cast.framework.CastReceiverOptions(); opts.disableIdleTimeout = true; opts.skipPlayersLoad = true;
   ctx.start(opts);
 } catch (err) { /* opened in a normal browser: shows the demo garden */ }

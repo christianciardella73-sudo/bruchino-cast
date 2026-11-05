@@ -67,7 +67,16 @@ function mix(a, b, k) { // two #rrggbb colours
   return "rgb(" + c(16) + "," + c(8) + "," + c(0) + ")";
 }
 function rng(seed) { let s = (Math.abs(Math.floor(seed)) % 2147483646) + 1; return () => (s = s * 16807 % 2147483647) / 2147483647; }
-function hash(a, b) { return Math.abs((a * 73856093) ^ (b * 19349663)); }
+function hash(a, b) { const v = Math.imul(a, 73856093) ^ Math.imul(b, 19349663); return v < 0 ? -v : v; } // as Kotlin Int
+// Same generator as the phone (Game.mixSeed + java.util.Random), so butterflies fly the same paths
+const M64 = (1n << 64n) - 1n, M48 = (1n << 48n) - 1n;
+function s64(x) { x &= M64; return x >= (1n << 63n) ? x - (1n << 64n) : x; }
+function mixSeed(x) { let z = s64(x + 0x9E3779B97F4A7C15n); z = s64((z ^ ((z & M64) >> 30n)) * 0xBF58476D1CE4E5B9n);
+  z = s64((z ^ ((z & M64) >> 27n)) * 0x94D049BB133111EBn); return s64(z ^ ((z & M64) >> 31n)); }
+function jrandom(seed) { let s = (BigInt.asUintN(64, seed) ^ 0x5DEECE66Dn) & M48;
+  return () => { s = (s * 0x5DEECE66Dn + 0xBn) & M48; return Number(s >> 24n) / 16777216; }; }
+const FLIGHT_LOOP = 7200;
+function flightT() { return (Date.now() % (FLIGHT_LOOP * 1000)) / 1000; }
 function grad(y0, y1, c) { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, mix(c, "#ffffff", 0.35)); gr.addColorStop(0.5, c); gr.addColorStop(1, mix(c, "#000000", 0.22)); return gr; }
 function fillStroke(path, fill, lw) { g.fillStyle = fill; g.fill(path); g.lineWidth = lw; g.strokeStyle = "rgba(43,42,38,.8)"; g.stroke(path); }
 function oval(x, y, rx, ry) { const p = new Path2D(); p.ellipse(x, y, rx, ry, 0, 0, TAU); return p; }
@@ -220,15 +229,15 @@ function larva(p, x, base, u, t) {
 
 // ---------- flight: free, visits, rest, shelters, chases (like Garden.kt) ----------
 function fly(i, seed, t, sp, n, depth = 0) {
-  const r = rng(seed * 31 + i + 7);
-  const a = r() * TAU, b = r() * TAU, sx = .03 + r() * .04, sy = .12 + r() * .2, period = 26 + r() * 14, phase = r() * period;
-  const free = tt => ({ x: W * (.5 + .47 * Math.sin(tt * sx + a)), y: H * (.3 + .2 * Math.sin(tt * sy + b)) });
+  const r = jrandom(mixSeed(seed * 31n + BigInt(i)));
+  const a = r() * TAU, b = r() * TAU, sx = .02 + r() * .03, sy = .12 + r() * .2, period = 26 + r() * 14, phase = r() * period;
+  const free = tt => ({ x: W * (.5 + .47 * Math.sin(tt * sx + a)), y: H * (.33 + .2 * Math.sin(tt * sy + b)) });
   const cycle = Math.floor((t + phase) / period), u = t + phase - cycle * period, roll = hash(i + 1, cycle);
   const k = u < 13 ? 0 : u < 16 ? ease((u - 13) / 3) : u < 22 ? 1 : u < 25 ? 1 - ease((u - 22) / 3) : 0;
   const p0 = free(t); let tg = null, spot = -1, inside = false;
   if (k > 0) {
     if (sp.length && roll % 5) { spot = roll % sp.length; tg = { x: sp[spot].x + ((i % 3) - 1) * H * .012, y: sp[spot].y }; inside = sp[spot].inside; }
-    else if (n > 1 && depth < 1) { const o = fly((i + n - 1) % n, seed - 0, t - .7, [], n, depth + 1); tg = { x: o.x - H * .05, y: o.y + H * .02 }; }
+    else if (n > 1 && depth < 1) { const o = fly((i + n - 1) % n, seed, t - .7, [], n, depth + 1); tg = { x: o.x - H * .05, y: o.y + H * .02 }; }
   }
   const x = tg ? p0.x + (tg.x - p0.x) * k : p0.x, y = tg ? p0.y + (tg.y - p0.y) * k : p0.y;
   const resting = tg && spot >= 0 && k >= .999;
@@ -328,7 +337,7 @@ function draw(now) {
   meadow(t, night, hour, ss);
   const laid = d.decos.slice().sort((p, q) => p.y - q.y).map(p => ({ p, x: p.x * W, y: groundY(p.y), u: unitAt(p.y) }));
   const sp = []; laid.forEach((l, i) => sp.push(...spots(l.p.id, l.x, l.y, l.u, i)));
-  const bs = d.butterflies.slice(-40), flies = bs.map((b, i) => fly(i, b.seed, t, sp, bs.length));
+  const bs = d.butterflies.slice(-40), ft = flightT(), seeds = bs.map(b => BigInt(b.sd || Math.round(b.seed || 0))), flies = bs.map((b, i) => fly(i, seeds[i], ft, sp, bs.length));
   const busy = new Set(flies.filter(f => f.spot >= 0).map(f => sp[f.spot].deco));
   laid.forEach((l, i) => deco(l.p.id, l.x, l.y, l.u, t, ss, busy.has(i), d.pet));
   const m = H * .11;

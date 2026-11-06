@@ -392,6 +392,10 @@ try {
   });
   const opts = new cast.framework.CastReceiverOptions(); opts.disableIdleTimeout = true; opts.skipPlayersLoad = true;
   ctx.start(opts);
+  // a TV that starts slowly can miss the phone's first garden: ask for it until it arrives (newer apps answer)
+  const hello = () => { if (GOT) return; try { ctx.getSenders().forEach(s => ctx.sendCustomMessage(NS, s.id, { type: "hello" })); } catch (e) {} };
+  ctx.addEventListener(cast.framework.system.EventType.SENDER_CONNECTED, () => setTimeout(hello, 300));
+  setInterval(hello, 2000);
 } catch (err) { /* opened in a normal browser: shows the demo garden */ }
 </script>
 </body>

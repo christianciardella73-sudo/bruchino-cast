@@ -259,24 +259,44 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     for (let k = 0; k < 4; k++) { fl(x - u * .81, y - u * (.3 + .3 * k), u * .06, "#F48FB1"); fl(x + u * .81, y - u * (.45 + .3 * k), u * .06, "#FFF59D"); }
     // through the arch: a soft glow of the secret garden
     const gl = g.createRadialGradient(x, y - u * .8, 0, x, y - u * .8, u * .7); gl.addColorStop(0, `rgba(255,249,196,${.25 + .15 * Math.sin(t * 2)})`); gl.addColorStop(1, "rgba(255,249,196,0)"); g.fillStyle = gl; g.beginPath(); g.arc(x, y - u * .8, u * .7, 0, TAU); g.fill();
-  } else if (id === "ant") { // Mimì's anthill (Mimì walks around it)
-    const p = new Path2D(); p.moveTo(x - u * .7, y); p.quadraticCurveTo(x, y - u * 1.3, x + u * .7, y); p.closePath(); shp(p, "#B98552", y - u * .7, y);
-    g.fillStyle = col("#3E2723"); g.beginPath(); g.ellipse(x, y - u * .56, u * .12, u * .06, 0, 0, TAU); g.fill();
+  } else if (id === "ant") { // Mimì's anthill: earthy mound with grains, a doorway, a little sign and a flower
+    const p = new Path2D(); p.moveTo(x - u * .85, y); p.bezierCurveTo(x - u * .7, y - u * .55, x - u * .3, y - u * 1.05, x, y - u * 1.05);
+    p.bezierCurveTo(x + u * .3, y - u * 1.05, x + u * .7, y - u * .55, x + u * .85, y); p.closePath(); shp(p, "#C4915C", y - u * 1.05, y);
+    const gr = rng(17); for (let k = 0; k < 26; k++) { const a = gr(), b = gr(), px = x + (a - .5) * u * 1.4 * (1 - b * .6), py = y - b * u * .95;
+      g.fillStyle = col(["#8D6E43", "#A97C50", "#E0B47C"][k % 3]); g.beginPath(); g.ellipse(px, py, u * .035, u * .025, a * 3, 0, TAU); g.fill(); }
+    shine(x - u * .25, y - u * .75, u * .35, u * .1);
+    const d = new Path2D(); d.ellipse(x + u * .05, y - u * .3, u * .16, u * .2, 0, Math.PI, 0); d.lineTo(x + u * .21, y - u * .2); d.lineTo(x - u * .11, y - u * .2); d.closePath();
+    g.fillStyle = col("#3E2723"); g.fill(d); g.lineWidth = lw; g.strokeStyle = "rgba(43,42,38,.8)"; g.stroke(d);
+    if (NIGHTD) { const gl = g.createRadialGradient(x + u * .05, y - u * .3, 0, x + u * .05, y - u * .3, u * .4); gl.addColorStop(0, "rgba(255,224,130,.5)"); gl.addColorStop(1, "rgba(255,224,130,0)"); g.fillStyle = gl; g.beginPath(); g.arc(x + u * .05, y - u * .3, u * .4, 0, TAU); g.fill(); }
+    line(x - u * .55, y - u * .1, x - u * .55, y - u * .55, col("#8D6E63"), u * .04);
+    const sg = new Path2D(); sg.roundRect(x - u * .78, y - u * .7, u * .46, u * .2, u * .04); shp(sg, "#FFF3E0", y - u * .7, y - u * .5);
+    g.fillStyle = INK; g.font = `700 ${Math.round(u * .13)}px "Google Sans", Roboto, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("Mimì", x - u * .55, y - u * .6);
+    fl(x + u * .62, y - u * .12, u * .06, "#F48FB1"); fl(x + u * .78, y - u * .05, u * .05, "#FFF59D");
     ANTHOME = [x, y];
-  } else if (id === "ladybug") { // Cocò on a leaf
-    line(x, y, x, y - u * .9, col("#558B2F"), u * .06);
-    g.fillStyle = col("#66BB6A"); g.beginPath(); g.ellipse(x, y - u * .95, u * .6, u * .3, -.26, 0, TAU); g.fill();
+  } else if (id === "ladybug") { // Cocò's home: a big shiny leaf on a curled stem, with dew drops
+    const st = new Path2D(); st.moveTo(x, y); st.bezierCurveTo(x - u * .2, y - u * .4, x + u * .2, y - u * .6, x, y - u * .9); g.strokeStyle = col("#558B2F"); g.lineWidth = u * .07; g.lineCap = "round"; g.stroke(st);
+    const lf = new Path2D(); lf.moveTo(x - u * .65, y - u * .9); lf.bezierCurveTo(x - u * .4, y - u * 1.35, x + u * .45, y - u * 1.3, x + u * .65, y - u * .95);
+    lf.bezierCurveTo(x + u * .4, y - u * .65, x - u * .4, y - u * .6, x - u * .65, y - u * .9); lf.closePath(); shp(lf, "#66BB6A", y - u * 1.3, y - u * .65);
+    g.strokeStyle = col("#388E3C"); g.lineWidth = u * .025; g.beginPath(); g.moveTo(x - u * .6, y - u * .9); g.quadraticCurveTo(x, y - u * 1.02, x + u * .6, y - u * .95); g.stroke();
+    for (let k = -2; k <= 2; k++) { if (!k) continue; g.beginPath(); g.moveTo(x + k * u * .2, y - u * .97); g.lineTo(x + k * u * .27, y - u * (k > 0 ? 1.12 : 1.1)); g.stroke(); }
+    shine(x - u * .2, y - u * 1.08, u * .4, u * .07);
+    [[-.35, -.82], [.42, -.86]].forEach(([dx, dy]) => { g.fillStyle = "rgba(225,245,254,.85)"; g.beginPath(); g.arc(x + dx * u, y + dy * u, u * .035, 0, TAU); g.fill(); g.fillStyle = "#fff"; g.beginPath(); g.arc(x + dx * u - u * .01, y + dy * u - u * .012, u * .01, 0, TAU); g.fill(); });
     const c = (t % 30) / 30, out = c < .6 ? 0 : Math.sin((c - .6) / .4 * Math.PI); // Cocò flies around and comes back
-    const lx = x + u * .05 + Math.sin((c - .6) * 15) * u * 4 * out, ly = y - u * 1 + Math.sin(t * 2) * u * .02 - u * 1.5 * out + Math.cos(t * 3) * u * .2 * out; g.fillStyle = "#2B2A26"; g.beginPath(); g.arc(lx + u * .15, ly, u * .09, 0, TAU); g.fill();
-    g.fillStyle = "#E53935"; g.beginPath(); g.arc(lx, ly, u * .2, 0, TAU); g.fill(); g.fillStyle = "#2B2A26";
-    [[-.09, -.08], [.09, -.07], [-.08, .08], [.08, .09]].forEach(([dx, dy]) => { g.beginPath(); g.arc(lx + dx * u, ly + dy * u, u * .036, 0, TAU); g.fill(); });
-  } else if (id === "bee") { // Bea's hive, Bea buzzing around
-    rect(x - u * .06, y - u * 1.1, u * .12, u * 1.1, "#8D6E63", u * .04);
-    for (let k = 0; k < 4; k++) { const w = u * (.5 + (k === 1 || k === 2 ? .18 : 0)), yy = y - u * (1.15 + .22 * (3 - k)); rect(x - w / 2, yy - u * .22, w, u * .24, "#FFC107", u * .1); }
+    const lx = x + u * .05 + Math.sin((c - .6) * 15) * u * 4 * out, ly = y - u * 1.05 + Math.sin(t * 2) * u * .02 - u * 1.5 * out + Math.cos(t * 3) * u * .2 * out;
+    ladybug(lx, ly, u * .24, out > 0 ? Math.sin(t * 6) * .4 : Math.sin(t * .8) * .25, out, t);
+  } else if (id === "bee") { // Bea's hive: a skep of straw rings on a wooden post, with a door and a honey drip
+    rect(x - u * .07, y - u * 1.05, u * .14, u * 1.05, "#8D6E63", u * .04);
+    rect(x - u * .45, y - u * 1.1, u * .9, u * .1, "#A1887F", u * .03);
+    const rings = [[.62, .24], [.7, .25], [.66, .24], [.52, .22], [.3, .2]];
+    let yy = y - u * 1.1; rings.forEach(([w, h]) => { const p = new Path2D(); p.roundRect(x - u * w / 2, yy - u * h, u * w, u * h, u * h / 2); shp(p, "#FFC93C", yy - u * h, yy);
+      g.strokeStyle = col("#C68A12"); g.lineWidth = u * .015; for (let k = 1; k < 6; k++) { g.beginPath(); g.moveTo(x - u * w / 2 + k * u * w / 6, yy - u * h * .15); g.lineTo(x - u * w / 2 + k * u * w / 6 - u * .02, yy - u * h * .85); g.stroke(); }
+      yy -= u * h * .85; });
+    shine(x - u * .15, y - u * 1.75, u * .25, u * .08);
+    const dr = new Path2D(); dr.ellipse(x, y - u * 1.28, u * .11, u * .08, 0, 0, TAU); g.fillStyle = col("#4E342E"); g.fill(dr);
+    const hd = new Path2D(); hd.moveTo(x + u * .2, y - u * 1.12); hd.quadraticCurveTo(x + u * .25, y - u * 1.0, x + u * .22, y - u * .95); hd.quadraticCurveTo(x + u * .17, y - u * 1.0, x + u * .2, y - u * 1.12); g.fillStyle = "#FFA000"; g.fill(hd);
     const bc = ((t + 9) % 24) / 24, bo = bc < .3 ? 0 : Math.sin((bc - .3) / .7 * Math.PI); // Bea visits the flowers and comes back
     const bx = x + Math.cos(t * 1.6) * u * .75 + Math.sin((bc - .3) * 9) * u * 6 * bo, by = y - u * 1.6 + Math.sin(t * 3.2) * u * .3 + u * (1.2 * bo + Math.sin(t * 4) * .25 * bo);
-    g.fillStyle = "rgba(255,255,255,.75)"; g.beginPath(); g.ellipse(bx - u * .05, by - u * .12, u * .06, u * .07, 0, 0, TAU); g.ellipse(bx + u * .05, by - u * .12, u * .06, u * .07, 0, 0, TAU); g.fill();
-    g.fillStyle = "#FFC107"; g.beginPath(); g.ellipse(bx, by, u * .14, u * .08, 0, 0, TAU); g.fill(); g.fillStyle = "#2B2A26"; g.fillRect(bx - u * .04, by - u * .08, u * .03, u * .16); g.fillRect(bx + u * .03, by - u * .08, u * .03, u * .16);
+    bee(bx, by, u * .22, t, Math.cos((bc - .3) * 9) * (bo > 0 ? 1 : Math.sin(t * 1.6)) < 0);
   } else if (id === "pond") {
     ovl(x - u * 1.2, y - u * .42, u * 2.4, u * .84, "#8D9C7A");
     const wg = g.createRadialGradient(x - u * .3, y - u * .1, 0, x, y, u * 1.2); wg.addColorStop(0, col("#81D4FA")); wg.addColorStop(.6, col("#29B6F6")); wg.addColorStop(1, col("#0288D1")); g.fillStyle = wg; g.beginPath(); g.ellipse(x, y, u * 1.08, u * .34, 0, 0, TAU); g.fill();
@@ -293,6 +313,52 @@ function deco(id, x, y, u, t, ss, busy, pet) {
 
 function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, y - r * .2, r * .55, 0, TAU); g.arc(x + r * .45, y - r * .2, r * .55, 0, TAU); g.fill();
   g.beginPath(); g.moveTo(x - r * .98, y - r * .05); g.lineTo(x + r * .98, y - r * .05); g.lineTo(x, y + r * .95); g.fill(); }
+// the friends, with shading, outlines and highlights like the decorations
+function ladybug(x, y, r, ang, flying, t) {
+  g.save(); g.translate(x, y); g.rotate(ang); const ink = "rgba(43,42,38,.85)";
+  if (flying > 0) { const f = Math.abs(Math.sin(t * 30)); g.fillStyle = "rgba(255,255,255,.55)"; [-1, 1].forEach(s => { g.beginPath(); g.ellipse(s * r * .55, -r * .5 - f * r * .2, r * .45, r * .25, s * .6, 0, TAU); g.fill(); }); }
+  g.strokeStyle = ink; g.lineWidth = r * .08; for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(s * r * .5, (k - 1) * r * .45); g.lineTo(s * r * 1.05, (k - 1) * r * .55 + Math.sin(t * 9 + k) * r * .06); g.stroke(); }
+  g.fillStyle = "#2B2A26"; g.beginPath(); g.arc(r * .85, 0, r * .42, 0, TAU); g.fill();
+  [[1.0, -.18], [1.0, .18]].forEach(([dx, dy]) => { g.fillStyle = "#fff"; g.beginPath(); g.arc(dx * r, dy * r, r * .1, 0, TAU); g.fill(); });
+  g.strokeStyle = "#2B2A26"; g.lineWidth = r * .06; [-1, 1].forEach(s => { g.beginPath(); g.moveTo(r * 1.1, s * r * .2); g.quadraticCurveTo(r * 1.45, s * r * .4, r * 1.4, s * r * .62); g.stroke(); g.beginPath(); g.arc(r * 1.4, s * r * .62, r * .07, 0, TAU); g.fill(); });
+  const sh = g.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r * 1.05); sh.addColorStop(0, "#FF7A6E"); sh.addColorStop(.6, "#E53935"); sh.addColorStop(1, "#A61B1B");
+  g.fillStyle = sh; g.beginPath(); g.ellipse(0, 0, r, r * .9, 0, 0, TAU); g.fill(); g.strokeStyle = ink; g.lineWidth = r * .07; g.stroke();
+  g.beginPath(); g.moveTo(r * .55, 0); g.lineTo(-r, 0); g.stroke();
+  g.fillStyle = "#2B2A26"; [[-.45, -.45, .2], [.1, -.5, .16], [-.45, .45, .2], [.1, .5, .16], [-.75, 0, .12]].forEach(([dx, dy, rr]) => { g.beginPath(); g.arc(dx * r, dy * r, rr * r, 0, TAU); g.fill(); });
+  g.fillStyle = "rgba(255,255,255,.55)"; g.beginPath(); g.ellipse(-r * .2, -r * .55, r * .3, r * .12, -.3, 0, TAU); g.fill();
+  g.restore();
+}
+function bee(x, y, r, t, faceLeft) {
+  g.save(); g.translate(x, y); if (faceLeft) g.scale(-1, 1); const ink = "rgba(43,42,38,.85)", f = Math.abs(Math.sin(t * 32));
+  g.fillStyle = "rgba(225,245,254,.7)"; g.strokeStyle = "rgba(120,144,156,.6)"; g.lineWidth = r * .05;
+  [[-.15, 1], [.2, .8]].forEach(([dx, k]) => { g.beginPath(); g.ellipse(dx * r, -r * (.75 + .25 * f), r * .45 * k, r * .65 * k, -.3 + dx, 0, TAU); g.fill(); g.stroke(); });
+  g.fillStyle = "#2B2A26"; g.beginPath(); g.moveTo(-r * 1.05, 0); g.lineTo(-r * 1.35, r * .05); g.lineTo(-r * 1.05, r * .12); g.fill();
+  const body = g.createLinearGradient(0, -r * .6, 0, r * .6); body.addColorStop(0, "#FFE082"); body.addColorStop(.5, "#FFC107"); body.addColorStop(1, "#E0A000");
+  g.fillStyle = body; g.beginPath(); g.ellipse(-r * .15, 0, r * .95, r * .62, 0, 0, TAU); g.fill();
+  g.save(); g.clip(); g.fillStyle = "#3E2723"; [-.65, -.2, .25].forEach(dx => g.fillRect(dx * r - r * .12, -r, r * .24, r * 2)); g.restore();
+  g.strokeStyle = ink; g.lineWidth = r * .07; g.beginPath(); g.ellipse(-r * .15, 0, r * .95, r * .62, 0, 0, TAU); g.stroke();
+  g.fillStyle = "#3E2723"; g.beginPath(); g.arc(r * .85, -r * .05, r * .42, 0, TAU); g.fill();
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(r * 1.0, -r * .15, r * .14, 0, TAU); g.fill(); g.fillStyle = "#2B2A26"; g.beginPath(); g.arc(r * 1.04, -r * .15, r * .07, 0, TAU); g.fill();
+  g.fillStyle = "rgba(255,138,128,.7)"; g.beginPath(); g.arc(r * 1.05, r * .12, r * .08, 0, TAU); g.fill();
+  g.strokeStyle = "#2B2A26"; g.lineWidth = r * .06; [[.75, .3], [.95, .45]].forEach(([dx, k]) => { g.beginPath(); g.moveTo(dx * r, -r * .4); g.quadraticCurveTo(dx * r + r * .1, -r * (.75 + k * .2), dx * r + r * .3, -r * (.8 + k * .2)); g.stroke(); });
+  g.fillStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.ellipse(-r * .3, -r * .35, r * .35, r * .1, 0, 0, TAU); g.fill();
+  g.restore();
+}
+function ant(x, y, r, t, left, walk, carry) {
+  g.save(); g.translate(x, y); if (left) g.scale(-1, 1); const ink = "#2B2A26";
+  g.strokeStyle = ink; g.lineWidth = r * .1; g.lineCap = "round";
+  for (let k = 0; k < 3; k++) { const ph = walk ? Math.sin(t * 16 + k * 2.1) * r * .3 : 0; g.beginPath(); g.moveTo(-r * .3 + k * r * .35, r * .05); g.lineTo(-r * .45 + k * r * .4 + ph, r * .4); g.lineTo(-r * .55 + k * r * .45 + ph, r * .75); g.stroke(); }
+  const seg = (cx, cy, rx, ry) => { const gr = g.createRadialGradient(cx - rx * .3, cy - ry * .4, 0, cx, cy, rx); gr.addColorStop(0, "#8D6E63"); gr.addColorStop(.6, "#5D4037"); gr.addColorStop(1, "#3E2723"); g.fillStyle = gr; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, TAU); g.fill(); };
+  seg(-r * .95, -r * .1, r * .5, r * .4); seg(-r * .05, -r * .05, r * .32, r * .26); seg(r * .65, -r * .25, r * .38, r * .35);
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(r * .8, -r * .35, r * .13, 0, TAU); g.fill(); g.fillStyle = ink; g.beginPath(); g.arc(r * .84, -r * .35, r * .07, 0, TAU); g.fill();
+  g.fillStyle = "rgba(255,138,128,.7)"; g.beginPath(); g.arc(r * .88, -r * .12, r * .07, 0, TAU); g.fill();
+  g.strokeStyle = ink; g.lineWidth = r * .07; [[.6, -.55], [.8, -.6]].forEach(([dx, dy]) => { g.beginPath(); g.moveTo(dx * r, dy * r); g.quadraticCurveTo(dx * r + r * .2, dy * r - r * .45, dx * r + r * .45, dy * r - r * .45); g.stroke(); });
+  g.fillStyle = "#F48FB1"; g.beginPath(); g.ellipse(r * .42, -r * .6, r * .14, r * .09, .5, 0, TAU); g.ellipse(r * .6, -r * .66, r * .14, r * .09, -.5, 0, TAU); g.fill(); // Mimì's bow
+  g.fillStyle = "rgba(255,255,255,.35)"; g.beginPath(); g.ellipse(-r * 1.05, -r * .3, r * .22, r * .08, 0, 0, TAU); g.fill();
+  if (carry) { g.save(); g.translate(r * .2, -r * 1.05); g.rotate(.2); g.fillStyle = "#43A047"; g.strokeStyle = "rgba(43,42,38,.8)"; g.lineWidth = r * .06; g.beginPath(); g.ellipse(0, 0, r * .8, r * .38, 0, 0, TAU); g.fill(); g.stroke();
+    g.strokeStyle = "#2E7D32"; g.lineWidth = r * .05; g.beginPath(); g.moveTo(-r * .7, 0); g.lineTo(r * .7, 0); g.stroke(); g.restore(); }
+  g.restore();
+}
 // the current caterpillar (or egg / cocoon), small, on the perch
 function larva(p, x, base, u, t, sleep) {
   if (p.stage === "EGG") { fillStroke(oval(x, base - u * .7, u * .5, u * .7), grad(base - u * 1.4, base, hex(p.eggColor)), u * .06); return; }
@@ -527,10 +593,7 @@ function draw(now) {
       if (k >= 0) { const out = k < .5, f = out ? k * 2 : 2 - k * 2; antAt = [home[0] + (lx - home[0]) * f, home[1] + (ly - home[1]) * f]; carry = !out; left = (lx < home[0]) === out; if (!out) continue; } }
     const gl = g.createRadialGradient(lx, ly, 0, lx, ly, u * .6); gl.addColorStop(0, "rgba(255,245,157,.6)"); gl.addColorStop(1, "rgba(255,245,157,0)"); g.fillStyle = gl; g.beginPath(); g.arc(lx, ly, u * .6, 0, TAU); g.fill();
     g.save(); g.translate(lx, ly); g.rotate((20 + i * 37) * Math.PI / 180); g.fillStyle = "#43A047"; g.strokeStyle = "rgba(43,42,38,.8)"; g.lineWidth = u * .03; g.beginPath(); g.ellipse(0, 0, u * .24, u * .12, 0, 0, TAU); g.fill(); g.stroke(); g.restore(); }
-  if (antAt) { const r = ua * .22, [ax, ay] = antAt; g.save(); g.translate(ax, ay); if (left) g.scale(-1, 1); g.fillStyle = "#4E342E";
-    [[-.9, .45], [0, .35], [.75, .38]].forEach(([dx, rr], k) => { g.beginPath(); g.arc(dx * r, k === 2 ? -r * .15 : 0, rr * r, 0, TAU); g.fill(); });
-    g.fillStyle = "#F48FB1"; g.beginPath(); g.arc(r * .55, -r * .5, r * .12, 0, TAU); g.fill();
-    if (carry) { g.fillStyle = "#7CB342"; g.beginPath(); g.ellipse(0, -r * 1.4, r * .8, r * .4, .2, 0, TAU); g.fill(); } g.restore(); }
+  if (antAt) ant(antAt[0], antAt[1], ua * .24, t, left, true, carry);
   // nectar: a flower blooms where the user tapped and the butterflies gather round it for a while
   let pull = 0, nx = 0, ny = 0;
   if (NECTAR) { let age = ((ft - NECTAR.t0) % FLIGHT_LOOP + FLIGHT_LOOP) % FLIGHT_LOOP; if (age > FLIGHT_LOOP / 2) age -= FLIGHT_LOOP;

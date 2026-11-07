@@ -120,8 +120,8 @@ function meadow(t, night, hour, ss) {
   hill(H * .63, H * .03, 2, night ? "#1B3322" : "#86C26B", 2.1);
   hill(H * .71, H * .012, 4, night ? "#16301B" : "#6DB33F", 2.6);
   const r = rng(11);
-  for (let i = 0; i < 80; i++) { const x = r() * W, y = H * (.74 + r() * .25), st = H * (.025 + r() * .035), bend = Math.sin(t * 1.4 + i) * H * .008;
-    g.strokeStyle = night ? "#2E5A2E" : "#3E8E2E"; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(x + bend, y - st); g.stroke();
+  for (let i = 0; i < 45; i++) { const x = r() * W, y = H * (.74 + r() * .25), st = H * (.025 + r() * .035), bend = Math.sin(t * 1.4 + i) * H * .008;
+    g.strokeStyle = night ? "#2E5A2E" : "#3E8E2E"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + bend, y - st); g.stroke();
     if (i % 3 === 0) flower(x + bend, y - st, H * .006, night ? "#7d7da0" : ["#ffffff", "#FFEB3B", "#F48FB1", "#CE93D8", "#FF8A65"][i % 5]); }
   // the season drifting down
   const fr = rng(99);
@@ -266,13 +266,15 @@ function deco(id, x, y, u, t, ss, busy, pet) {
   } else if (id === "ladybug") { // Cocò on a leaf
     line(x, y, x, y - u * .9, col("#558B2F"), u * .06);
     g.fillStyle = col("#66BB6A"); g.beginPath(); g.ellipse(x, y - u * .95, u * .6, u * .3, -.26, 0, TAU); g.fill();
-    const lx = x + u * .05, ly = y - u * 1 + Math.sin(t * 2) * u * .02; g.fillStyle = "#2B2A26"; g.beginPath(); g.arc(lx + u * .15, ly, u * .09, 0, TAU); g.fill();
+    const c = (t % 30) / 30, out = c < .6 ? 0 : Math.sin((c - .6) / .4 * Math.PI); // Cocò flies around and comes back
+    const lx = x + u * .05 + Math.sin((c - .6) * 15) * u * 4 * out, ly = y - u * 1 + Math.sin(t * 2) * u * .02 - u * 1.5 * out + Math.cos(t * 3) * u * .2 * out; g.fillStyle = "#2B2A26"; g.beginPath(); g.arc(lx + u * .15, ly, u * .09, 0, TAU); g.fill();
     g.fillStyle = "#E53935"; g.beginPath(); g.arc(lx, ly, u * .2, 0, TAU); g.fill(); g.fillStyle = "#2B2A26";
     [[-.09, -.08], [.09, -.07], [-.08, .08], [.08, .09]].forEach(([dx, dy]) => { g.beginPath(); g.arc(lx + dx * u, ly + dy * u, u * .036, 0, TAU); g.fill(); });
   } else if (id === "bee") { // Bea's hive, Bea buzzing around
     rect(x - u * .06, y - u * 1.1, u * .12, u * 1.1, "#8D6E63", u * .04);
     for (let k = 0; k < 4; k++) { const w = u * (.5 + (k === 1 || k === 2 ? .18 : 0)), yy = y - u * (1.15 + .22 * (3 - k)); rect(x - w / 2, yy - u * .22, w, u * .24, "#FFC107", u * .1); }
-    const bx = x + Math.cos(t * 1.6) * u * .75, by = y - u * 1.6 + Math.sin(t * 3.2) * u * .3;
+    const bc = ((t + 9) % 24) / 24, bo = bc < .3 ? 0 : Math.sin((bc - .3) / .7 * Math.PI); // Bea visits the flowers and comes back
+    const bx = x + Math.cos(t * 1.6) * u * .75 + Math.sin((bc - .3) * 9) * u * 6 * bo, by = y - u * 1.6 + Math.sin(t * 3.2) * u * .3 + u * (1.2 * bo + Math.sin(t * 4) * .25 * bo);
     g.fillStyle = "rgba(255,255,255,.75)"; g.beginPath(); g.ellipse(bx - u * .05, by - u * .12, u * .06, u * .07, 0, 0, TAU); g.ellipse(bx + u * .05, by - u * .12, u * .06, u * .07, 0, 0, TAU); g.fill();
     g.fillStyle = "#FFC107"; g.beginPath(); g.ellipse(bx, by, u * .14, u * .08, 0, 0, TAU); g.fill(); g.fillStyle = "#2B2A26"; g.fillRect(bx - u * .04, by - u * .08, u * .03, u * .16); g.fillRect(bx + u * .03, by - u * .08, u * .03, u * .16);
   } else if (id === "pond") {

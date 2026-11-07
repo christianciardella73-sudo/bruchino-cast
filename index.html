@@ -61,7 +61,7 @@ let ERR = "";
 function showErr(e) { STAT.err = String(e && e.message || e); const m = String(e && (e.stack || e.message) || e).split("\n").slice(0, 2).join(" | "); if (m !== ERR) { ERR = m; document.getElementById("err").textContent = "⚠ " + m; } }
 addEventListener("error", e => showErr(e.error || e.message));
 let GOT = 0; // time the first garden arrived
-let NECTAR = null, BIRTH = null, JOY = -99, ROOMCLOSE = null, LEAVES = [], ANT = null; // Mimì: leaflets [i, x, depth], trip {i, t0}
+let NECTAR = null, BIRTH = null, JOY = -99, ROOMCLOSE = null, MSG = null, LEAVES = [], ANT = null; // Mimì: leaflets [i, x, depth], trip {i, t0}
 const SFX = {toc: "sfx/toc.wav", boing: "sfx/boing.wav", snore: "sfx/snore.wav", chime: "sfx/chime.wav", heart: "sfx/heart.wav", crack: "sfx/crack.wav", giggle: "sfx/giggle.wav"};
 // ---------- sounds (the app's own) ----------
 let AC = null; const BUF = {};
@@ -337,6 +337,11 @@ function frame(now) {
       if (R && R !== "loading") { const k = ROOM ? Math.min(1, (t - ROOM.open) / .6) : 1 - Math.min(1, (t - ROOMCLOSE.t) / .5);
         if (!ROOM && k <= 0) ROOMCLOSE = null; else { g.save(); g.globalAlpha = k; const z = .92 + .08 * k; g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2, -H / 2);
           roomDraw(R, (ROOM || ROOMCLOSE).st, flightT(), t, DATA && DATA.pet); g.restore(); } } }
+    if (MSG) { const a = t - MSG.t; if (a > 4) MSG = null; else { // the phone's message, top centre
+      g.save(); g.globalAlpha = Math.min(1, a / .3, (4 - a) / .5); g.font = `700 ${Math.round(H * .045)}px "Google Sans", Roboto, sans-serif`;
+      const tw = g.measureText(MSG.text).width, bw = Math.min(W * .9, tw + H * .08), bh = H * .09, bx = (W - bw) / 2, by = H * .06 - (1 - Math.min(1, a / .3)) * H * .03;
+      const p = new Path2D(); p.roundRect(bx, by, bw, bh, bh / 2); g.fillStyle = "#FFF8E1"; g.shadowColor = "rgba(0,0,0,.3)"; g.shadowBlur = 16; g.fill(p); g.shadowBlur = 0;
+      g.fillStyle = INK; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(MSG.text, W / 2, by + bh / 2, W * .86); g.restore(); } }
     if (BIRTH) { const age = t - BIRTH.t; if (age > 11) BIRTH = null; else { g.save(); g.globalAlpha = Math.min(1, age / .6, (11 - age) / .8); birth(BIRTH.b, age, t); g.restore(); } }
     if (STAT.frames % 60 === 1) { // what the canvas really holds (sample near the top-left)
       STAT.cv = cv.width + "x" + cv.height + " css " + cv.clientWidth + "x" + cv.clientHeight;
@@ -556,6 +561,7 @@ window.addEventListener("DOMContentLoaded", function startCast() { try {
         if (!m.id) { if (ROOM) ROOMCLOSE = { id: ROOM.id, st: ROOM.st, t: now }; ROOM = null; }
         else { loadRoom(m.id); ROOM = { id: m.id, st: m.st || {}, open: ROOM && ROOM.id === m.id ? ROOM.open : now };
           const R = ROOMS[m.id]; if (m.tap && R && R.hot) { const h = R.hot.find(x => x.id === m.tap); if (h && h.sfx) play(h.sfx, .8); } } }
+      else if (m.type === "msg") { MSG = { text: m.text, t: now }; play("chime", .8); }
       else if (m.type === "leaves") LEAVES = m.spots || [];
       else if (m.type === "ant") { ANT = { i: m.i, t0: m.t0 }; play("toc", .7); }
       else if (m.type === "pet") { JOY = now; play("giggle"); setTimeout(() => play("heart", .7), 250); }                                     // the pet on the perch was tapped

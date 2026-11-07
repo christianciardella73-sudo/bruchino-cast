@@ -178,8 +178,9 @@ function spots(id, x, y, u, i) {
     default: return [];
   }
 }
-let NIGHTD = false, ANTHOME = null; // set by draw(): decorations dim at night like Garden.kt
+let NIGHTD = false, ANTHOME = null, FRIEND = {}; // set by draw(): decorations dim at night like Garden.kt
 function deco(id, x, y, u, t, ss, busy, pet) {
+  let J = 99; if (id === "ant" || id === "ladybug" || id === "bee") { t = flightT(); if (FRIEND[id] != null) J = ageOf(t, FRIEND[id]); } // friends: flight clock, same as the phone
   // the same drawings as drawDeco in core/Garden.kt (shading, outlines, shine), plus a few touches for the big screen
   const lw = u * .045, dim = NIGHTD ? .55 : 1, col = c => NIGHTD ? mix(c, "#1B2440", .45) : c;
   const shp = (p, c, top, bot) => { g.fillStyle = grad(top, bot, col(c)); g.fill(p); g.lineWidth = lw; g.strokeStyle = "rgba(43,42,38,.8)"; g.stroke(p); };
@@ -272,6 +273,7 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     const sg = new Path2D(); sg.roundRect(x - u * .78, y - u * .7, u * .46, u * .2, u * .04); shp(sg, "#FFF3E0", y - u * .7, y - u * .5);
     g.fillStyle = INK; g.font = `700 ${Math.round(u * .13)}px "Google Sans", Roboto, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("Mimì", x - u * .55, y - u * .6);
     fl(x + u * .62, y - u * .12, u * .06, "#F48FB1"); fl(x + u * .78, y - u * .05, u * .05, "#FFF59D");
+    if (J >= 0 && J <= 2.5) for (let k = 0; k < 5; k++) { const a = J - k * .2; if (a >= 0 && a <= 1.6) heart(x + Math.sin(k * 2.1 + a * 3) * u * .4, y - u * 1.0 - a * u * 1.1, u * .16, `rgba(255,82,119,${1 - a / 1.6})`); }
     ANTHOME = [x, y];
   } else if (id === "ladybug") { // Cocò's home: a big shiny leaf on a curled stem, with dew drops
     const st = new Path2D(); st.moveTo(x, y); st.bezierCurveTo(x - u * .2, y - u * .4, x + u * .2, y - u * .6, x, y - u * .9); g.strokeStyle = col("#558B2F"); g.lineWidth = u * .07; g.lineCap = "round"; g.stroke(st);
@@ -283,7 +285,10 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     [[-.35, -.82], [.42, -.86]].forEach(([dx, dy]) => { g.fillStyle = "rgba(225,245,254,.85)"; g.beginPath(); g.arc(x + dx * u, y + dy * u, u * .035, 0, TAU); g.fill(); g.fillStyle = "#fff"; g.beginPath(); g.arc(x + dx * u - u * .01, y + dy * u - u * .012, u * .01, 0, TAU); g.fill(); });
     const c = (t % 30) / 30, out = c < .6 ? 0 : Math.sin((c - .6) / .4 * Math.PI); // Cocò flies around and comes back
     const lx = x + u * .05 + Math.sin((c - .6) * 15) * u * 4 * out, ly = y - u * 1.05 + Math.sin(t * 2) * u * .02 - u * 1.5 * out + Math.cos(t * 3) * u * .2 * out;
-    ladybug(lx, ly, u * .24, out > 0 ? Math.sin(t * 6) * .4 : Math.sin(t * .8) * .25, out, t);
+    let lx2 = lx, ly2 = ly, fly = out;
+    if (J >= 0 && J <= 3) { const a = J / 3 * TAU; lx2 = x + Math.sin(a) * u * .9; ly2 = y - u * 1.05 - (1 - Math.cos(a)) * u * .6; fly = 1;
+      for (let k = 0; k < 8; k++) { g.fillStyle = `rgba(255,236,140,${(Math.sin(t * 8 + k) + 1) / 2 * (1 - J / 3)})`; g.beginPath(); g.arc(lx2 + Math.cos(k * .8) * u * .35, ly2 + Math.sin(k * .8) * u * .35, u * .04, 0, TAU); g.fill(); } }
+    ladybug(lx2, ly2, u * .24, fly > 0 ? Math.sin(t * 6) * .4 : Math.sin(t * .8) * .25, fly, t);
   } else if (id === "bee") { // Bea's hive: a skep of straw rings on a wooden post, with a door and a honey drip
     rect(x - u * .07, y - u * 1.05, u * .14, u * 1.05, "#8D6E63", u * .04);
     rect(x - u * .45, y - u * 1.1, u * .9, u * .1, "#A1887F", u * .03);
@@ -293,10 +298,13 @@ function deco(id, x, y, u, t, ss, busy, pet) {
       yy -= u * h * .85; });
     shine(x - u * .15, y - u * 1.75, u * .25, u * .08);
     const dr = new Path2D(); dr.ellipse(x, y - u * 1.28, u * .11, u * .08, 0, 0, TAU); g.fillStyle = col("#4E342E"); g.fill(dr);
-    const hd = new Path2D(); hd.moveTo(x + u * .2, y - u * 1.12); hd.quadraticCurveTo(x + u * .25, y - u * 1.0, x + u * .22, y - u * .95); hd.quadraticCurveTo(x + u * .17, y - u * 1.0, x + u * .2, y - u * 1.12); g.fillStyle = "#FFA000"; g.fill(hd);
+    const hd = new Path2D(); const dp = J >= 0 && J <= 3 ? 1 + J * .6 : 1; hd.moveTo(x + u * .2, y - u * 1.12); hd.quadraticCurveTo(x + u * .25, y - u * (1.12 - .12 * dp), x + u * .22, y - u * (1.12 - .17 * dp)); hd.quadraticCurveTo(x + u * .17, y - u * (1.12 - .12 * dp), x + u * .2, y - u * 1.12); g.fillStyle = "#FFA000"; g.fill(hd);
     const bc = ((t + 9) % 24) / 24, bo = bc < .3 ? 0 : Math.sin((bc - .3) / .7 * Math.PI); // Bea visits the flowers and comes back
     const bx = x + Math.cos(t * 1.6) * u * .75 + Math.sin((bc - .3) * 9) * u * 6 * bo, by = y - u * 1.6 + Math.sin(t * 3.2) * u * .3 + u * (1.2 * bo + Math.sin(t * 4) * .25 * bo);
-    bee(bx, by, u * .22, t, Math.cos((bc - .3) * 9) * (bo > 0 ? 1 : Math.sin(t * 1.6)) < 0);
+    let bx2 = bx, by2 = by, bl = Math.cos((bc - .3) * 9) * (bo > 0 ? 1 : Math.sin(t * 1.6)) < 0;
+    if (J >= 0 && J <= 3) { const a = J * 4; bx2 = x + Math.cos(a) * u * .8; by2 = y - u * 1.5 + Math.sin(a) * u * .4; bl = Math.sin(a) > 0;
+      for (let k = 0; k < 4; k++) { const q = J - k * .3; if (q >= 0 && q <= 1.6) heart(x + (k - 1.5) * u * .3, y - u * 1.9 - q * u * .8, u * .13, `rgba(255,179,0,${1 - q / 1.6})`); } }
+    bee(bx2, by2, u * .22, t, bl);
   } else if (id === "pond") {
     ovl(x - u * 1.2, y - u * .42, u * 2.4, u * .84, "#8D9C7A");
     const wg = g.createRadialGradient(x - u * .3, y - u * .1, 0, x, y, u * 1.2); wg.addColorStop(0, col("#81D4FA")); wg.addColorStop(.6, col("#29B6F6")); wg.addColorStop(1, col("#0288D1")); g.fillStyle = wg; g.beginPath(); g.ellipse(x, y, u * 1.08, u * .34, 0, 0, TAU); g.fill();
@@ -586,14 +594,15 @@ function draw(now) {
   laid.forEach((l, i) => deco(l.p.id, l.x, l.y, l.u, t, ss, busy.has(i), d.pet));
   const m = H * .11;
   // Mimì's leaflets, and Mimì going to fetch one (same timing as Garden.kt)
-  const ft2 = flightT(), ua = unitAt(.6), home = ANTHOME; let antAt = home ? [home[0] + Math.cos(t * .7) * ua * .9, home[1] + ua * .15] : null, carry = false, left = Math.sin(t * .7) > 0;
+  const ft2 = flightT(), ua = unitAt(.6), home = ANTHOME; let antAt = home ? [home[0] + Math.cos(ft2 * .7) * ua * .9, home[1] + ua * .15] : null, carry = false, left = Math.sin(ft2 * .7) > 0, awalk = true;
+  if (antAt && FRIEND.ant != null) { const a = ageOf(ft2, FRIEND.ant); if (a >= 0 && a <= 1.6) { antAt[1] -= Math.abs(Math.sin(a / .4 * Math.PI)) * ua * .3; awalk = false; } }
   for (const [i, x, dd] of LEAVES) { const u = unitAt(dd), lx = x * W, ly = groundY(dd) - u * .15;
     if (ANT && ANT.i === i && home) { const trip = Math.min(7, Math.max(2, 2 * Math.hypot(lx - home[0], ly - home[1]) / (ua * 4))), k = ageOf(ft2, ANT.t0) / trip;
       if (k >= 1) { ANT = null; LEAVES = LEAVES.filter(s => s[0] !== i); continue; }
       if (k >= 0) { const out = k < .5, f = out ? k * 2 : 2 - k * 2; antAt = [home[0] + (lx - home[0]) * f, home[1] + (ly - home[1]) * f]; carry = !out; left = (lx < home[0]) === out; if (!out) continue; } }
     const gl = g.createRadialGradient(lx, ly, 0, lx, ly, u * .6); gl.addColorStop(0, "rgba(255,245,157,.6)"); gl.addColorStop(1, "rgba(255,245,157,0)"); g.fillStyle = gl; g.beginPath(); g.arc(lx, ly, u * .6, 0, TAU); g.fill();
     g.save(); g.translate(lx, ly); g.rotate((20 + i * 37) * Math.PI / 180); g.fillStyle = "#43A047"; g.strokeStyle = "rgba(43,42,38,.8)"; g.lineWidth = u * .03; g.beginPath(); g.ellipse(0, 0, u * .24, u * .12, 0, 0, TAU); g.fill(); g.stroke(); g.restore(); }
-  if (antAt) ant(antAt[0], antAt[1], ua * .24, t, left, true, carry);
+  if (antAt) ant(antAt[0], antAt[1], ua * .24, t, left, awalk || carry, carry);
   // nectar: a flower blooms where the user tapped and the butterflies gather round it for a while
   let pull = 0, nx = 0, ny = 0;
   if (NECTAR) { let age = ((ft - NECTAR.t0) % FLIGHT_LOOP + FLIGHT_LOOP) % FLIGHT_LOOP; if (age > FLIGHT_LOOP / 2) age -= FLIGHT_LOOP;
@@ -628,6 +637,7 @@ window.addEventListener("DOMContentLoaded", function startCast() { try {
           const R = ROOMS[m.id]; if (m.tap && R && R.hot) { const h = R.hot.find(x => x.id === m.tap); if (h && h.sfx) play(h.sfx, .8); } } }
       else if (m.type === "msg") { MSG = { text: m.text, t: now }; play("chime", .8); }
       else if (m.type === "leaves") LEAVES = m.spots || [];
+      else if (m.type === "friend") { FRIEND[m.id] = m.t0; play(m.id === "ladybug" ? "chime" : "heart", .7); }
       else if (m.type === "ant") { ANT = { i: m.i, t0: m.t0 }; play("toc", .7); }
       else if (m.type === "pet") { JOY = now; play("giggle"); setTimeout(() => play("heart", .7), 250); }                                     // the pet on the perch was tapped
       else if (m.type === "birth") { BIRTH = { b: m.b, t: now }; // the cocoon beats, cracks open, the butterfly lands

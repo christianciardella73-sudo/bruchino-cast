@@ -619,8 +619,8 @@ function draw(now) {
       f.x += (nx + Math.cos(a) * rr - f.x) * k; f.y += (ny - unitAt(.5) * 1.3 + Math.sin(a) * rr * .6 - f.y) * k; }
     g.save(); g.globalAlpha = f.alpha; g.translate(f.x, f.y); g.rotate(f.tilt); g.translate(-f.x, -f.y);
     butterfly(b, f.flap, f.x, f.y, f.spot >= 0 ? m * .7 : m, t); g.restore(); });
-  if (d.pet && d.pet.name) { g.font = `600 ${Math.round(H * .04)}px "Google Sans", Roboto, sans-serif`; g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 12;
-    g.fillText("🐛 " + d.pet.name + "   🦋 " + d.butterflies.length, H * .05, H * .08); g.shadowBlur = 0; }
+  if (d.pet && d.pet.name) { g.font = `600 ${Math.round(H * .04)}px "Google Sans", Roboto, sans-serif`; g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 12; g.textAlign = "left"; g.textBaseline = "alphabetic";
+    g.fillText("🐛 " + d.pet.name + "   🦋 " + d.butterflies.length, W * .05, H * .1); g.shadowBlur = 0; }
 }
 requestAnimationFrame(frame);
 

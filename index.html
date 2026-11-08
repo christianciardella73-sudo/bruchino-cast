@@ -205,6 +205,16 @@ function spots(id, x, y, u, i) {
   }
 }
 let NIGHTD = false, ANTHOME = null, FRIEND = {}; // set by draw(): decorations dim at night like Garden.kt
+// little touches on the illustrated decorations: in the evening the cottage window glows and the chimney smokes, the mushroom lights up
+function glow(x, y, r, a) { const gl = g.createRadialGradient(x, y, 0, x, y, r); gl.addColorStop(0, `rgba(255,214,120,${a})`); gl.addColorStop(1, "rgba(255,214,120,0)"); g.fillStyle = gl; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+function decoLife(id, x, y, u, t) {
+  if (id === "house") {
+    if (NIGHTD) { glow(x - u * .17, y - u * 1.52, u * .45, .75); glow(x - u * .02, y - u * .55, u * .35, .4); }
+    if (NIGHTD || new Date().getHours() >= 17) for (let k = 0; k < 4; k++) { const a = (t * .35 + k / 4) % 1; g.fillStyle = `rgba(230,230,235,${.55 * (1 - a)})`;
+      g.beginPath(); g.arc(x + u * (.36 + Math.sin(t + k * 2) * .08 + a * .25), y - u * (2.35 + a * .9), u * (.08 + a * .14), 0, TAU); g.fill(); }
+  } else if (id === "mushroom" && NIGHTD) { glow(x + u * .22, y - u * .72, u * .4, .8);
+    for (let k = 0; k < 5; k++) { const tw = (Math.sin(t * 2.2 + k * 1.3) + 1) / 2; glow(x + u * (-.6 + k * .3), y - u * (1.35 + Math.sin(k) * .12), u * .12, .3 + .5 * tw); } }
+}
 function deco(id, x, y, u, t, ss, busy, pet) {
   let J = 99; if (id === "ant" || id === "ladybug" || id === "bee") { t = flightT(); if (FRIEND[id] != null) J = ageOf(t, FRIEND[id]); } // friends: flight clock, same as the phone
   // the same drawings as drawDeco in core/Garden.kt (shading, outlines, shine), plus a few touches for the big screen
@@ -216,7 +226,7 @@ function deco(id, x, y, u, t, ss, busy, pet) {
   const fl = (fx, fy, r, c) => { g.fillStyle = col(c); for (let k = 0; k < 5; k++) { const a = k * TAU / 5; g.beginPath(); g.arc(fx + Math.cos(a) * r * 1.05, fy + Math.sin(a) * r * 1.05, r, 0, TAU); g.fill(); } g.fillStyle = col("#FFB300"); g.beginPath(); g.arc(fx, fy, r * .75, 0, TAU); g.fill(); };
   const line = (x0, y0, x1, y1, c, w) => { g.strokeStyle = c; g.lineWidth = w; g.lineCap = "round"; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
   const sh = g.createRadialGradient(x, y, 0, x, y, u * 1.1); sh.addColorStop(0, "rgba(0,0,0,.22)"); sh.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = sh; g.beginPath(); g.ellipse(x, y, u * 1.1, u * .15, 0, 0, TAU); g.fill();
-  const DA = DS[id]; if (DA && spr(DA[0], x + u * DA[2], y + u * DA[3], u * DA[1]) && id !== "perch") return;
+  const DA = DS[id]; if (DA && spr(DA[0], x + u * DA[2], y + u * DA[3], u * DA[1]) && id !== "perch") { decoLife(id, x, y, u, t); return; }
   if (id === "perch") {
     if (!SPR.d_perch) {
     rect(x - u * .07, y - u * 1.15, u * .14, u * 1.15, "#8D6E63", u * .05);
@@ -370,7 +380,7 @@ const TINT = {}; // filtered copies made once (canvas filters every frame are fa
 function tinted(im, key, filter) { if (!CACHE_OK) return im; let c = TINT[key]; if (c) return c;
   const k = Math.min(1, 140 / Math.max(im.width, im.height)); // small copies: TV memory is tight
   TINT[key] = im; c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); asImage(c, i => TINT[key] = i); return im; } // no ctx.filter: old Cast browsers choke on it
-const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
+const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "d_tree_spring", "d_tree_autumn", "d_tree_winter", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 // NVIDIA Shield (Tegra): shows black with offscreen canvases; it reports the same browser as other Android TV boxes, so the graphics chip tells them apart
 let SEASON = "summer"; const LITE = window.LITE = false, GPU = ""; // no per-device modes: everything drawn on screen is a plain image // NVIDIA Shield: no offscreen canvases (it showed black)

@@ -12,7 +12,7 @@
   window.onerror = function (msg, src, line) { STAT.err = msg + " @" + line; };
   setInterval(function () {
     var el = document.getElementById("st"); if (!el || !STAT.err) { if (el) el.textContent = ""; return; } // first 30 s, then only on errors
-    el.textContent = "v6 " + navigator.userAgent.slice(-70) + " · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
+    el.textContent = "v6 cache " + (STAT.cache || "?") + " " + navigator.userAgent.slice(-70) + " · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
       " · frames " + STAT.frames + " · data " + STAT.data + " · canvas " + (STAT.cv || "?") + " · px " + (STAT.px || "?") + (STAT.err ? " · ERR " + STAT.err : "");
   }, 1000);
 </script>
@@ -106,8 +106,10 @@ function season(m) { return [12, 1, 2].includes(m) ? "winter" : m <= 5 ? "spring
 let BG = null, BGK = ""; // sky, sun or moon and hills change slowly: drawn once into a canvas, refreshed every few minutes
 function meadow(t, night, hour, ss) {
   const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10);
-  if (bk !== BGK) { BGK = bk; const c = document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; asImage(c, i => { if (BGK === bk) BG = i; }); }
-  if (BG && BG.width === W && BG.height === H) g.drawImage(BG, 0, 0); else meadowStatic(night, hour);
+  g.fillStyle = night ? "#0B1630" : "#8fc3e8"; g.fillRect(0, 0, W, H); // always cover the last frame
+  if (!CACHE_OK) meadowStatic(night, hour);
+  else if (bk !== BGK) { BGK = bk; const c = document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; asImage(c, i => { if (BGK === bk) BG = i; }); }
+  if (CACHE_OK) { if (BG && BG.width === W && BG.height === H) g.drawImage(BG, 0, 0); else meadowStatic(night, hour); }
   if (!night) for (let k = 0; k < 6; k++) { const x = ((t * (8 + k * 4) + k * 380) % (W + 400)) - 200, y = H * (.08 + .05 * (k % 3)), u = H * .05;
     g.fillStyle = "rgba(255,255,255,.92)"; [[0, 0, 1], [1.2, -.4, 1.3], [2.4, 0, .9]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(x + dx * u, y + dy * u, r * u, 0, TAU); g.fill(); }); }
   meadowLive(t, night, ss);
@@ -354,9 +356,15 @@ function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, 
 // the friends, with shading, outlines and highlights like the decorations
 const DS = {perch: ["d_perch", 1.3, -0.13, 0], house: ["d_house", 2.5, 0, 0.05], mushroom: ["d_mushroom", 1.75, 0, 0.05], swing: ["d_swing", 2.2, 0, 0.05], fountain: ["d_fountain", 1.75, 0, 0.05], tree: ["d_tree", 3.6, 0, 0.05], arch: ["d_arch", 2.4, 0, 0.05], pond: ["d_pond", 1.2, 0, 0.45]}; // illustrated decorations: same table as DECO_ART in Garden.kt
 // a prepared canvas becomes a plain image before it is ever drawn on screen: some TV boxes (e.g. NVIDIA Shield) show black when a canvas is drawn onto the screen canvas
+// self-test at start: on some boxes (NVIDIA Shield) a prepared canvas comes out empty; then everything is drawn directly
+let CACHE_OK = false;
+(function selfTest() { try { const a = document.createElement("canvas"); a.width = a.height = 4; const x = a.getContext("2d"); x.fillStyle = "#f00"; x.fillRect(0, 0, 4, 4);
+  const im = new Image(); im.onload = () => { try { const b = document.createElement("canvas"); b.width = b.height = 4; const y = b.getContext("2d"); y.drawImage(im, 0, 0);
+    const d = y.getImageData(1, 1, 1, 1).data; CACHE_OK = d[0] > 200 && d[1] < 60 && d[3] > 200; } catch (e) { CACHE_OK = false; } STAT.cache = CACHE_OK ? "ok" : "off"; };
+  im.src = a.toDataURL("image/png"); } catch (e) { CACHE_OK = false; } })();
 function asImage(c, done) { const im = new Image(); im.onload = () => done(im); im.src = c.toDataURL("image/png"); }
 const TINT = {}; // filtered copies made once (canvas filters every frame are far too slow on a TV)
-function tinted(im, key, filter) { let c = TINT[key]; if (c) return c;
+function tinted(im, key, filter) { if (!CACHE_OK) return im; let c = TINT[key]; if (c) return c;
   const k = Math.min(1, 140 / Math.max(im.width, im.height)); // small copies: TV memory is tight
   TINT[key] = im; c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); asImage(c, i => TINT[key] = i); return im; } // no ctx.filter: old Cast browsers choke on it
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
@@ -364,7 +372,7 @@ const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive",
 // NVIDIA Shield (Tegra): shows black with offscreen canvases; it reports the same browser as other Android TV boxes, so the graphics chip tells them apart
 const LITE = window.LITE = false, GPU = ""; // no per-device modes: everything drawn on screen is a plain image // NVIDIA Shield: no offscreen canvases (it showed black)
 const SIZED = {}; let SIZEDN = 0; // sprites pre-scaled to the size they are shown at: shrinking a big image every frame is slow on a TV
-function sized(n, im, w, h) { const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
+function sized(n, im, w, h) { if (!CACHE_OK) return im; const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
   if (SIZEDN > 40) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
   SIZED[k] = im; SIZEDN++; c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); asImage(c, i => SIZED[k] = i); return im; }
 function spr(n, x, y, h, centre, flip, rot) { let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);

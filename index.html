@@ -11,8 +11,8 @@
   var STAT = { err: "", frames: 0, data: 0 };
   window.onerror = function (msg, src, line) { STAT.err = msg + " @" + line; };
   setInterval(function () {
-    var el = document.getElementById("st"); if (!el || !STAT.err) return; // shown only when something is wrong
-    el.textContent = "v3 · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
+    var el = document.getElementById("st"); if (!el || (!STAT.err && performance.now() > 30000)) { if (el) el.textContent = ""; return; } // first 30 s, then only on errors
+    el.textContent = "v4 " + (window.LITE ? "lite " : "") + navigator.userAgent.slice(-70) + " · " + window.innerWidth + "x" + window.innerHeight + " dpr " + (window.devicePixelRatio || 1) +
       " · frames " + STAT.frames + " · data " + STAT.data + " · canvas " + (STAT.cv || "?") + " · px " + (STAT.px || "?") + (STAT.err ? " · ERR " + STAT.err : "");
   }, 1000);
 </script>
@@ -22,7 +22,7 @@
   /* the Cast framework adds its own full-screen (black) media player: we do not play media */
   cast-media-player { display: none !important; }
   /* diagnostics: if drawing fails on the TV, the error is written here in small */
-  #st { z-index: 13; position: fixed; right: 14px; bottom: 10px; color: #fff; font: 16px monospace; text-shadow: 0 1px 3px #000; opacity: .8; }
+  #st { z-index: 13; position: fixed; left: 14px; top: 10px; color: #fff; font: 16px monospace; text-shadow: 0 1px 3px #000; opacity: .8; }
   /* static splash: plain HTML, so it shows at once (before any script is loaded) */
   #splash { z-index: 11; position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: linear-gradient(#0b1630, #2e2560 60%, #4a3a78); color: #fff; font-family: Georgia, serif; transition: opacity 1.2s; }
@@ -106,8 +106,8 @@ function season(m) { return [12, 1, 2].includes(m) ? "winter" : m <= 5 ? "spring
 let BG = null, BGK = ""; // sky, sun or moon and hills change slowly: drawn once into a canvas, refreshed every few minutes
 function meadow(t, night, hour, ss) {
   const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10);
-  if (bk !== BGK) { const c = BG || document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; BG = c; BGK = bk; }
-  g.drawImage(BG, 0, 0);
+  if (LITE) { meadowStatic(night, hour); } else if (bk !== BGK) { const c = BG || document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; BG = c; BGK = bk; }
+  if (!LITE) g.drawImage(BG, 0, 0);
   if (!night) for (let k = 0; k < 6; k++) { const x = ((t * (8 + k * 4) + k * 380) % (W + 400)) - 200, y = H * (.08 + .05 * (k % 3)), u = H * .05;
     g.fillStyle = "rgba(255,255,255,.92)"; [[0, 0, 1], [1.2, -.4, 1.3], [2.4, 0, .9]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(x + dx * u, y + dy * u, r * u, 0, TAU); g.fill(); }); }
   meadowLive(t, night, ss);
@@ -359,8 +359,9 @@ function tinted(im, key, filter) { let c = TINT[key]; if (c) return c;
   c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); return TINT[key] = c; } // no ctx.filter: old Cast browsers choke on it
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
+const LITE = window.LITE = /SHIELD|mdarcy|foster/i.test(navigator.userAgent); // NVIDIA Shield: no offscreen canvases (it showed black)
 const SIZED = {}; let SIZEDN = 0; // sprites pre-scaled to the size they are shown at: shrinking a big image every frame is slow on a TV
-function sized(n, im, w, h) { const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
+function sized(n, im, w, h) { if (LITE) return im; const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
   if (SIZEDN > 40) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
   c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); SIZEDN++; return SIZED[k] = c; }
 function spr(n, x, y, h, centre, flip, rot) { let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);

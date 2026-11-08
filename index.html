@@ -105,12 +105,12 @@ function season(m) { return [12, 1, 2].includes(m) ? "winter" : m <= 5 ? "spring
 
 let BG = null, BGK = ""; // sky, sun or moon and hills change slowly: drawn once into a canvas, refreshed every few minutes
 function meadow(t, night, hour, ss) {
-  const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10);
+  const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10) + SEASON + (SPR["g_land_" + SEASON] ? 1 : 0);
   if (!CACHE_OK) meadowStatic(night, hour); // its sky gradient covers the last frame
   else if (bk !== BGK) { BGK = bk; const c = document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; asImage(c, i => { if (BGK === bk) BG = i; }); }
   if (CACHE_OK) { if (BG && BG.width === W && BG.height === H && BG.complete) g.drawImage(BG, 0, 0); else meadowStatic(night, hour); } // one full-screen paint per frame: boxes are limited by pixels painted
-  if (!night) for (let k = 0; k < 6; k++) { const x = ((t * (8 + k * 4) + k * 380) % (W + 400)) - 200, y = H * (.08 + .05 * (k % 3)), u = H * .05;
-    g.fillStyle = "rgba(255,255,255,.92)"; [[0, 0, 1], [1.2, -.4, 1.3], [2.4, 0, .9]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(x + dx * u, y + dy * u, r * u, 0, TAU); g.fill(); }); }
+  if (!night) for (let k = 0; k < 5; k++) { const cl = SPR["g_cloud" + (k % 3)], ch = H * (.09 + .03 * (k % 3)); if (!cl) continue; const cw = ch * cl.width / cl.height;
+    const x = ((t * (6 + k * 3) + k * 420) % (W + cw * 2)) - cw, y = H * (.05 + .06 * (k % 3)); g.drawImage(cl, x, y, cw, ch); } // illustrated clouds drifting
   meadowLive(t, night, ss);
 }
 function meadowStatic(night, hour) {
@@ -123,11 +123,11 @@ function meadowStatic(night, hour) {
     const sx = W * .86, sy = H * .14, rg = g.createRadialGradient(sx, sy, 0, sx, sy, H * .35); rg.addColorStop(0, "rgba(255,245,157,.7)"); rg.addColorStop(1, "rgba(255,245,157,0)");
     g.fillStyle = rg; g.fillRect(0, 0, W, H * .6); g.fillStyle = "#FFD54F"; g.beginPath(); g.arc(sx, sy, H * .065, 0, TAU); g.fill();
   }
-  const hill = (y0, amp, ph, col, f) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += W / 80) g.lineTo(x, y0 + Math.sin(x / W * TAU * f + ph) * amp); g.lineTo(W, H); g.fill(); };
-  hill(H * .55, H * .035, .5, night ? "#1C2E3A" : "#A8D5A2", 1.6);
-  hill(H * .63, H * .03, 2, night ? "#1B3322" : "#86C26B", 2.1);
-  hill(H * .71, H * .012, 4, night ? "#16301B" : "#6DB33F", 2.6);
-  meadowFlowers(night);
+  // illustrated landscape of the season (img/g_land_<season>.webp); evening = a night-blue veil over it
+  const land = SPR["g_land_" + SEASON];
+  if (land) { const lh = W * land.height / land.width; g.drawImage(land, 0, H - lh, W, lh);
+    if (night) { g.fillStyle = "rgba(14,22,52,.55)"; g.fillRect(0, H - lh, W, lh); } }
+  else { g.fillStyle = night ? "#16301B" : "#6DB33F"; g.fillRect(0, H * .62, W, H * .38); }
 }
 function meadowFlowers(night) { const r = rng(11);
   for (let i = 0; i < 14; i++) { const x = r() * W, y = H * (.76 + r() * .22); flower(x, y, H * .007, night ? "#7d7da0" : ["#ffffff", "#FFEB3B", "#F48FB1", "#CE93D8", "#FF8A65"][i % 5]); } }
@@ -382,7 +382,7 @@ function tinted(im, key, filter) { if (!CACHE_OK) return im; let c = TINT[key]; 
   TINT[key] = im; c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); asImage(c, i => TINT[key] = i); return im; } // no ctx.filter: old Cast browsers choke on it
 const RIMG = {}; // room pictures, loaded when a room first needs them
 function roomImg(n) { let im = RIMG[n]; if (!im) { im = RIMG[n] = new Image(); im.src = "img/" + n + ".webp"; } return im.complete && im.naturalWidth ? im : null; }
-const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "d_tree_spring", "d_tree_autumn", "d_tree_winter", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
+const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "d_tree_spring", "d_tree_autumn", "d_tree_winter", "g_land_spring", "g_land_summer", "g_land_autumn", "g_land_winter", "g_cloud0", "g_cloud1", "g_cloud2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 // NVIDIA Shield (Tegra): shows black with offscreen canvases; it reports the same browser as other Android TV boxes, so the graphics chip tells them apart
 let SEASON = "summer"; const LITE = window.LITE = false, GPU = ""; // no per-device modes: everything drawn on screen is a plain image // NVIDIA Shield: no offscreen canvases (it showed black)

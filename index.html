@@ -153,7 +153,7 @@ function butterfly(b, flap, cx, cy, m, t) {
   if (im) { // illustrated species (img/b_<species>.webp): each half of the wings flaps, a small hue shift from the seed keeps every butterfly unique
     const h = m * .95, w = h * im.width / im.height, hue = (r() - .5) * 24;
     if (b.v === 1) { const gl = g.createRadialGradient(cx, cy, 0, cx, cy, m * .7); gl.addColorStop(0, "rgba(255,255,255,.55)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, m * .7, 0, TAU); g.fill(); }
-    const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src0 = gold ? tinted(im, "g" + b.s, "rgba(255,190,20,.6)") : im, src = sized((gold ? "bg" : "b") + b.s, src0, w, h);
+    const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src0 = gold ? tinted(im, "g" + b.s, "rgba(255,190,20,.6)") : im, src = src0;
     g.save();
     const fw = Math.max(.06, Math.abs(flap)), iw = im.width / 2;
     g.drawImage(src, 0, 0, src.width / 2, src.height, cx - w / 2 * fw, cy - h / 2, w / 2 * fw, h);
@@ -361,7 +361,7 @@ const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive",
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 const SIZED = {}; let SIZEDN = 0; // sprites pre-scaled to the size they are shown at: shrinking a big image every frame is slow on a TV
 function sized(n, im, w, h) { const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
-  if (SIZEDN > 300) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
+  if (SIZEDN > 40) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
   c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); SIZEDN++; return SIZED[k] = c; }
 function spr(n, x, y, h, centre, flip, rot) { let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);
   g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); 

@@ -655,9 +655,9 @@ function roomParts(e, T) {
     else if (e.p === "firefly") { const x = e.x + e.w * (.5 + .45 * Math.sin(T * .3 * (1 + c) + i * 2)), y = e.y + e.h * (.5 + .45 * Math.cos(T * .4 * (1 + b) + i)), gl = Math.pow((Math.sin(T * 3 + i * 2) + 1) / 2, 2);
       g.fillStyle = `rgba(255,245,157,${.3 * gl})`; g.beginPath(); g.arc(x, y, 18, 0, TAU); g.fill(); g.fillStyle = `rgba(255,249,196,${.4 + .6 * gl})`; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill(); }
     else if (e.p === "snow" || e.p === "petal" || e.p === "leaf") { const p = (T * .06 * (1 + c) + b) % 1, x = e.x + a * e.w + Math.sin(T + i) * 25, y = e.y + e.h * p;
+      if (e.p === "snow") { g.fillStyle = "rgba(255,255,255,.9)"; const q = 4 + 3 * c; g.fillRect(x - q / 2, y - q / 2, q, q); continue; } // pollen/snow: plain squares, cheap on slow boxes
       g.save(); g.translate(x, y); g.rotate(T * (1 + c) + i);
-      if (e.p === "snow") { g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(0, 0, 4 + 3 * c, 0, TAU); g.fill(); }
-      else { g.fillStyle = e.p === "petal" ? "#F8BBD0" : ["#E65100", "#FF8F00", "#C62828"][i % 3]; g.beginPath(); g.ellipse(0, 0, 14, 7, 0, 0, TAU); g.fill(); }
+      { g.fillStyle = e.p === "petal" ? "#F8BBD0" : ["#E65100", "#FF8F00", "#C62828"][i % 3]; g.beginPath(); g.ellipse(0, 0, 14, 7, 0, 0, TAU); g.fill(); }
       g.restore(); }
     else if (e.p === "drop") { const p = (T * (.9 + c * .6) + b) % 1, x = e.x + a * e.w, y = e.y + e.h * p; g.fillStyle = `rgba(225,245,254,${.9 * (1 - p * .6)})`; g.beginPath(); g.ellipse(x, y, 5, 8, 0, 0, TAU); g.fill(); } }
 }

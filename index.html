@@ -332,7 +332,7 @@ function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, 
   g.beginPath(); g.moveTo(x - r * .98, y - r * .05); g.lineTo(x + r * .98, y - r * .05); g.lineTo(x, y + r * .95); g.fill(); }
 // the friends, with shading, outlines and highlights like the decorations
 const DS = {perch: ["d_perch", 1.3, -0.13, 0], house: ["d_house", 2.5, 0, 0.05], mushroom: ["d_mushroom", 1.75, 0, 0.05], swing: ["d_swing", 2.2, 0, 0.05], fountain: ["d_fountain", 1.75, 0, 0.05], tree: ["d_tree", 3.6, 0, 0.05], arch: ["d_arch", 2.4, 0, 0.05], pond: ["d_pond", 1.2, 0, 0.45]}; // illustrated decorations: same table as DECO_ART in Garden.kt
-const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_lady_f1", "f_lady_f2", "f_bee2"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
+const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 function spr(n, x, y, h, centre, flip, rot) { const im = SPR[n]; if (!im) return false; const w = h * im.width / im.height;
   g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); if (NIGHTD) g.filter = "brightness(.65) saturate(.8)";
@@ -370,7 +370,7 @@ function bee(x, y, r, t, faceLeft) {
   g.restore();
 }
 function ant(x, y, r, t, left, walk, carry) {
-  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr(walk && Math.sin(t * 9) > 0 ? "f_ant2" : "f_ant", x, y + r * .8 - st * r * .1, r * 3.2, false, left, walk ? Math.sin(t * 14) * .05 : 0);
+  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr(SPR.f_antw0 ? "f_antw" + (walk ? Math.floor(t * 10) % 4 : 0) : walk && Math.sin(t * 9) > 0 ? "f_ant2" : "f_ant", x, y + r * .8 - st * r * .04, r * 3.2, false, left, walk ? Math.sin(t * 14) * .05 : 0);
     if (carry) { g.save(); g.translate(x, y - r * 1.5); g.fillStyle = "#43A047"; g.beginPath(); g.ellipse(0, 0, r * .6, r * .28, .2, 0, TAU); g.fill(); g.restore(); } return; }
   g.save(); g.translate(x, y); if (left) g.scale(-1, 1); const ink = "#2B2A26";
   g.strokeStyle = ink; g.lineWidth = r * .1; g.lineCap = "round";

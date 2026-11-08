@@ -144,7 +144,7 @@ function butterfly(b, flap, cx, cy, m, t) {
   if (im) { // illustrated species (img/b_<species>.webp): each half of the wings flaps, a small hue shift from the seed keeps every butterfly unique
     const h = m * .95, w = h * im.width / im.height, hue = (r() - .5) * 24;
     if (b.v === 1) { const gl = g.createRadialGradient(cx, cy, 0, cx, cy, m * .7); gl.addColorStop(0, "rgba(255,255,255,.55)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, m * .7, 0, TAU); g.fill(); }
-    const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src = gold ? tinted(im, "g" + b.s, "sepia(1) saturate(3) hue-rotate(-8deg) brightness(1.12)") : hb ? tinted(im, b.s + ":" + hb, `hue-rotate(${hb}deg)`) : im;
+    const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src = gold ? tinted(im, "g" + b.s, "rgba(255,190,20,.6)") : im;
     g.save();
     const fw = Math.max(.06, Math.abs(flap)), iw = im.width / 2;
     g.drawImage(src, 0, 0, src.width / 2, src.height, cx - w / 2 * fw, cy - h / 2, w / 2 * fw, h);
@@ -347,7 +347,7 @@ const DS = {perch: ["d_perch", 1.3, -0.13, 0], house: ["d_house", 2.5, 0, 0.05],
 const TINT = {}; // filtered copies made once (canvas filters every frame are far too slow on a TV)
 function tinted(im, key, filter) { let c = TINT[key]; if (c) return c;
   const k = Math.min(1, 140 / Math.max(im.width, im.height)); // small copies: TV memory is tight
-  c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.filter = filter; x.drawImage(im, 0, 0, c.width, c.height); return TINT[key] = c; }
+  c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); return TINT[key] = c; } // no ctx.filter: old Cast browsers choke on it
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 function spr(n, x, y, h, centre, flip, rot) { const im = SPR[n]; if (!im) return false; const w = h * im.width / im.height;

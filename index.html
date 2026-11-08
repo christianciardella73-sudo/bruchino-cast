@@ -475,7 +475,7 @@ function frame(now) {
     if (BIRTH) { const age = t - BIRTH.t; if (age > 11) BIRTH = null; else { g.save(); g.globalAlpha = Math.min(1, age / .6, (11 - age) / .8); birth(BIRTH.b, age, t); g.restore(); } }
     if (STAT.frames % 60 === 1) { // what the canvas really holds (sample near the top-left)
       STAT.cv = cv.width + "x" + cv.height + " css " + cv.clientWidth + "x" + cv.clientHeight;
-      // no getImageData here: reading pixels back stalls the TV graphics chip
+      if (window.LITE) { const d = g.getImageData(20, 20, 1, 1).data; STAT.px = d[0] + "," + d[1] + "," + d[2]; } // the Shield shows the canvas only with this read-back (found by testing); elsewhere it just slows the TV down
     }
   } catch (e) { showErr(e); }
 }

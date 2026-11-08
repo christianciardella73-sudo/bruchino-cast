@@ -152,13 +152,17 @@ function butterfly(b, flap, cx, cy, m, t) {
   const gold = b.v === 3, rainbow = b.s === 7;
   const im = SPR["b_" + b.s];
   if (im) { // illustrated species (img/b_<species>.webp): each half of the wings flaps, a small hue shift from the seed keeps every butterfly unique
-    const h = m * .95, w = h * im.width / im.height, hue = (r() - .5) * 24;
+    const h = m * (.88 + r() * .16), w = h * im.width / im.height, hue = (r() - .5) * 24;
     if (b.v === 1) { const gl = g.createRadialGradient(cx, cy, 0, cx, cy, m * .7); gl.addColorStop(0, "rgba(255,255,255,.55)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, m * .7, 0, TAU); g.fill(); }
     const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src0 = gold ? tinted(im, "g" + b.s, "rgba(255,190,20,.6)") : im, src = src0;
     g.save();
     const fw = Math.max(.06, Math.abs(flap)), iw = im.width / 2;
     g.drawImage(src, 0, 0, src.width / 2, src.height, cx - w / 2 * fw, cy - h / 2, w / 2 * fw, h);
     g.drawImage(src, src.width / 2, 0, src.width / 2, src.height, cx, cy - h / 2, w / 2 * fw, h);
+    // every butterfly is unique: a few spots from its seed, mirrored on both wings (as in the drawn butterflies)
+    const n = 2 + Math.floor(r() * 3), sc = r() < .5 ? "rgba(255,255,255,.7)" : hex(b.a);
+    g.fillStyle = sc; for (let k = 0; k < n; k++) { const rr = m * (.018 + r() * .025), sx = m * (.14 + r() * .2), sy = m * (-.28 + r() * .5);
+      for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(cx + sd * sx * fw, cy + sy, Math.max(.5, rr * fw), rr, 0, 0, TAU); g.fill(); } }
     g.restore();
   } else {
   let w1 = hex(b.w1), w2 = hex(b.w2), acc = hex(b.a);
@@ -369,13 +373,13 @@ function tinted(im, key, filter) { if (!CACHE_OK) return im; let c = TINT[key]; 
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 // NVIDIA Shield (Tegra): shows black with offscreen canvases; it reports the same browser as other Android TV boxes, so the graphics chip tells them apart
-const LITE = window.LITE = false, GPU = ""; // no per-device modes: everything drawn on screen is a plain image // NVIDIA Shield: no offscreen canvases (it showed black)
+let SEASON = "summer"; const LITE = window.LITE = false, GPU = ""; // no per-device modes: everything drawn on screen is a plain image // NVIDIA Shield: no offscreen canvases (it showed black)
 const SIZED = {}; let SIZEDN = 0; // sprites pre-scaled to the size they are shown at: shrinking a big image every frame is slow on a TV
 function sized(n, im, w, h) { if (!CACHE_OK) return im; const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
   if (SIZEDN > 40) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
   SIZED[k] = im; SIZEDN++; c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); asImage(c, i => SIZED[k] = i); return im; }
-function spr(n, x, y, h, centre, flip, rot) { let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);
-  g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); 
+function spr(n, x, y, h, centre, flip, rot) { if (n === "d_tree" && SPR["d_tree_" + SEASON]) n = "d_tree_" + SEASON; let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);
+  g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); if (NIGHTD) g.globalAlpha *= .72; // evening: the dark sky shows through, no filters 
   g.drawImage(im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
 function ladybug(x, y, r, ang, flying, t) {
   if (spr(flying > 0 ? (Math.sin(t * 22) > 0 ? "f_lady_f1" : "f_lady_f2") : "f_ladybug", x, y, r * (flying > 0 ? 3.8 : 3.4), true, flying > 0 && Math.cos(ang * 3) < 0, ang * .4)) return;
@@ -648,7 +652,7 @@ function roomParts(e, T) {
 // ---------- splash ----------
 function draw(now) {
   const t = (now - T0) / 1000, d = DATA || { butterflies: [], decos: [{ id: "perch", x: .5, y: .5 }], pet: null };
-  const date = new Date(), hour = date.getHours() + date.getMinutes() / 60, night = hour >= 20 || hour < 7, ss = season(date.getMonth() + 1);
+  const date = new Date(), hour = date.getHours() + date.getMinutes() / 60, night = hour >= 20 || hour < 7, ss = season(date.getMonth() + 1); SEASON = ss;
   meadow(t, night, hour, ss);
   const laid = d.decos.slice().sort((p, q) => p.y - q.y).map(p => ({ p, x: p.x * W, y: groundY(p.y), u: unitAt(p.y) }));
   const sp = []; laid.forEach((l, i) => sp.push(...spots(l.p.id, l.x, l.y, l.u, i)));

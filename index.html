@@ -261,6 +261,7 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     // through the arch: a soft glow of the secret garden
     const gl = g.createRadialGradient(x, y - u * .8, 0, x, y - u * .8, u * .7); gl.addColorStop(0, `rgba(255,249,196,${.25 + .15 * Math.sin(t * 2)})`); gl.addColorStop(1, "rgba(255,249,196,0)"); g.fillStyle = gl; g.beginPath(); g.arc(x, y - u * .8, u * .7, 0, TAU); g.fill();
   } else if (id === "ant") { // Mimì's anthill: earthy mound with grains, a doorway, a little sign and a flower
+    if (!spr("f_anthill", x, y + u * .05, u * 1.3)) {
     const p = new Path2D(); p.moveTo(x - u * .85, y); p.bezierCurveTo(x - u * .7, y - u * .55, x - u * .3, y - u * 1.05, x, y - u * 1.05);
     p.bezierCurveTo(x + u * .3, y - u * 1.05, x + u * .7, y - u * .55, x + u * .85, y); p.closePath(); shp(p, "#C4915C", y - u * 1.05, y);
     const gr = rng(17); for (let k = 0; k < 26; k++) { const a = gr(), b = gr(), px = x + (a - .5) * u * 1.4 * (1 - b * .6), py = y - b * u * .95;
@@ -273,9 +274,11 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     const sg = new Path2D(); sg.roundRect(x - u * .78, y - u * .7, u * .46, u * .2, u * .04); shp(sg, "#FFF3E0", y - u * .7, y - u * .5);
     g.fillStyle = INK; g.font = `700 ${Math.round(u * .13)}px "Google Sans", Roboto, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("Mimì", x - u * .55, y - u * .6);
     fl(x + u * .62, y - u * .12, u * .06, "#F48FB1"); fl(x + u * .78, y - u * .05, u * .05, "#FFF59D");
+    }
     if (J >= 0 && J <= 2.5) for (let k = 0; k < 5; k++) { const a = J - k * .2; if (a >= 0 && a <= 1.6) heart(x + Math.sin(k * 2.1 + a * 3) * u * .4, y - u * 1.0 - a * u * 1.1, u * .16, `rgba(255,82,119,${1 - a / 1.6})`); }
     ANTHOME = [x, y];
   } else if (id === "ladybug") { // Cocò's home: a big shiny leaf on a curled stem, with dew drops
+    if (!spr("f_leaf", x, y, u * 1.5)) {
     const st = new Path2D(); st.moveTo(x, y); st.bezierCurveTo(x - u * .2, y - u * .4, x + u * .2, y - u * .6, x, y - u * .9); g.strokeStyle = col("#558B2F"); g.lineWidth = u * .07; g.lineCap = "round"; g.stroke(st);
     const lf = new Path2D(); lf.moveTo(x - u * .65, y - u * .9); lf.bezierCurveTo(x - u * .4, y - u * 1.35, x + u * .45, y - u * 1.3, x + u * .65, y - u * .95);
     lf.bezierCurveTo(x + u * .4, y - u * .65, x - u * .4, y - u * .6, x - u * .65, y - u * .9); lf.closePath(); shp(lf, "#66BB6A", y - u * 1.3, y - u * .65);
@@ -283,6 +286,7 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     for (let k = -2; k <= 2; k++) { if (!k) continue; g.beginPath(); g.moveTo(x + k * u * .2, y - u * .97); g.lineTo(x + k * u * .27, y - u * (k > 0 ? 1.12 : 1.1)); g.stroke(); }
     shine(x - u * .2, y - u * 1.08, u * .4, u * .07);
     [[-.35, -.82], [.42, -.86]].forEach(([dx, dy]) => { g.fillStyle = "rgba(225,245,254,.85)"; g.beginPath(); g.arc(x + dx * u, y + dy * u, u * .035, 0, TAU); g.fill(); g.fillStyle = "#fff"; g.beginPath(); g.arc(x + dx * u - u * .01, y + dy * u - u * .012, u * .01, 0, TAU); g.fill(); });
+    }
     const c = (t % 30) / 30, out = c < .6 ? 0 : Math.sin((c - .6) / .4 * Math.PI); // Cocò flies around and comes back
     const lx = x + u * .05 + Math.sin((c - .6) * 15) * u * 4 * out, ly = y - u * 1.05 + Math.sin(t * 2) * u * .02 - u * 1.5 * out + Math.cos(t * 3) * u * .2 * out;
     let lx2 = lx, ly2 = ly, fly = out;
@@ -290,6 +294,7 @@ function deco(id, x, y, u, t, ss, busy, pet) {
       for (let k = 0; k < 8; k++) { g.fillStyle = `rgba(255,236,140,${(Math.sin(t * 8 + k) + 1) / 2 * (1 - J / 3)})`; g.beginPath(); g.arc(lx2 + Math.cos(k * .8) * u * .35, ly2 + Math.sin(k * .8) * u * .35, u * .04, 0, TAU); g.fill(); } }
     ladybug(lx2, ly2, u * .24, fly > 0 ? Math.sin(t * 6) * .4 : Math.sin(t * .8) * .25, fly, t);
   } else if (id === "bee") { // Bea's hive: a skep of straw rings on a wooden post, with a door and a honey drip
+    if (!spr("f_hive", x, y, u * 2.15)) {
     rect(x - u * .07, y - u * 1.05, u * .14, u * 1.05, "#8D6E63", u * .04);
     rect(x - u * .45, y - u * 1.1, u * .9, u * .1, "#A1887F", u * .03);
     const rings = [[.62, .24], [.7, .25], [.66, .24], [.52, .22], [.3, .2]];
@@ -299,6 +304,7 @@ function deco(id, x, y, u, t, ss, busy, pet) {
     shine(x - u * .15, y - u * 1.75, u * .25, u * .08);
     const dr = new Path2D(); dr.ellipse(x, y - u * 1.28, u * .11, u * .08, 0, 0, TAU); g.fillStyle = col("#4E342E"); g.fill(dr);
     const hd = new Path2D(); const dp = J >= 0 && J <= 3 ? 1 + J * .6 : 1; hd.moveTo(x + u * .2, y - u * 1.12); hd.quadraticCurveTo(x + u * .25, y - u * (1.12 - .12 * dp), x + u * .22, y - u * (1.12 - .17 * dp)); hd.quadraticCurveTo(x + u * .17, y - u * (1.12 - .12 * dp), x + u * .2, y - u * 1.12); g.fillStyle = "#FFA000"; g.fill(hd);
+    }
     const bc = ((t + 9) % 24) / 24, bo = bc < .3 ? 0 : Math.sin((bc - .3) / .7 * Math.PI); // Bea visits the flowers and comes back
     const bx = x + Math.cos(t * 1.6) * u * .75 + Math.sin((bc - .3) * 9) * u * 6 * bo, by = y - u * 1.6 + Math.sin(t * 3.2) * u * .3 + u * (1.2 * bo + Math.sin(t * 4) * .25 * bo);
     let bx2 = bx, by2 = by, bl = Math.cos((bc - .3) * 9) * (bo > 0 ? 1 : Math.sin(t * 1.6)) < 0;
@@ -322,7 +328,13 @@ function deco(id, x, y, u, t, ss, busy, pet) {
 function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, y - r * .2, r * .55, 0, TAU); g.arc(x + r * .45, y - r * .2, r * .55, 0, TAU); g.fill();
   g.beginPath(); g.moveTo(x - r * .98, y - r * .05); g.lineTo(x + r * .98, y - r * .05); g.lineTo(x, y + r * .95); g.fill(); }
 // the friends, with shading, outlines and highlights like the decorations
+const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
+// illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
+function spr(n, x, y, h, centre, flip, rot) { const im = SPR[n]; if (!im) return false; const w = h * im.width / im.height;
+  g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); if (NIGHTD) g.filter = "brightness(.65) saturate(.8)";
+  g.drawImage(im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
 function ladybug(x, y, r, ang, flying, t) {
+  if (spr("f_ladybug", x, y, r * 2.6, true, flying > 0 && Math.cos(ang * 3) < 0, ang * .4)) return;
   g.save(); g.translate(x, y); g.rotate(ang); const ink = "rgba(43,42,38,.85)";
   if (flying > 0) { const f = Math.abs(Math.sin(t * 30)); g.fillStyle = "rgba(255,255,255,.55)"; [-1, 1].forEach(s => { g.beginPath(); g.ellipse(s * r * .55, -r * .5 - f * r * .2, r * .45, r * .25, s * .6, 0, TAU); g.fill(); }); }
   g.strokeStyle = ink; g.lineWidth = r * .08; for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(s * r * .5, (k - 1) * r * .45); g.lineTo(s * r * 1.05, (k - 1) * r * .55 + Math.sin(t * 9 + k) * r * .06); g.stroke(); }
@@ -337,6 +349,7 @@ function ladybug(x, y, r, ang, flying, t) {
   g.restore();
 }
 function bee(x, y, r, t, faceLeft) {
+  if (spr("f_bee", x, y + Math.sin(t * 9) * r * .08, r * 2.8, true, faceLeft, Math.sin(t * 5) * .1)) return;
   g.save(); g.translate(x, y); if (faceLeft) g.scale(-1, 1); const ink = "rgba(43,42,38,.85)", f = Math.abs(Math.sin(t * 32));
   g.fillStyle = "rgba(225,245,254,.7)"; g.strokeStyle = "rgba(120,144,156,.6)"; g.lineWidth = r * .05;
   [[-.15, 1], [.2, .8]].forEach(([dx, k]) => { g.beginPath(); g.ellipse(dx * r, -r * (.75 + .25 * f), r * .45 * k, r * .65 * k, -.3 + dx, 0, TAU); g.fill(); g.stroke(); });
@@ -353,6 +366,8 @@ function bee(x, y, r, t, faceLeft) {
   g.restore();
 }
 function ant(x, y, r, t, left, walk, carry) {
+  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr("f_ant", x, y + r * .8 - st * r * .12, r * 2.4, false, left, walk ? Math.sin(t * 14) * .05 : 0);
+    if (carry) { g.save(); g.translate(x, y - r * 1.5); g.fillStyle = "#43A047"; g.beginPath(); g.ellipse(0, 0, r * .6, r * .28, .2, 0, TAU); g.fill(); g.restore(); } return; }
   g.save(); g.translate(x, y); if (left) g.scale(-1, 1); const ink = "#2B2A26";
   g.strokeStyle = ink; g.lineWidth = r * .1; g.lineCap = "round";
   for (let k = 0; k < 3; k++) { const ph = walk ? Math.sin(t * 16 + k * 2.1) * r * .3 : 0; g.beginPath(); g.moveTo(-r * .3 + k * r * .35, r * .05); g.lineTo(-r * .45 + k * r * .4 + ph, r * .4); g.lineTo(-r * .55 + k * r * .45 + ph, r * .75); g.stroke(); }

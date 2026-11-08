@@ -40,7 +40,7 @@
 <script>
 "use strict";
 const NS = "urn:x-cast:cloud.shazam.bruchino";
-const cv = document.getElementById("c"), g = cv.getContext("2d", { alpha: false });
+const cv = document.getElementById("c"); let g = cv.getContext("2d", { alpha: false });
 // older Chromecasts: no roundRect on paths
 if (!Path2D.prototype.roundRect) Path2D.prototype.roundRect = function (x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
@@ -103,8 +103,17 @@ const SKY = [[0, "#0D1B3A", "#2B2459"], [5.5, "#0D1B3A", "#2B2459"], [6.5, "#5D6
 function skyFor(h) { let i = 0; while (i < SKY.length - 2 && SKY[i + 1][0] <= h) i++; const a = SKY[i], b = SKY[i + 1], k = Math.min(1, Math.max(0, (h - a[0]) / (b[0] - a[0]))); return [mix(a[1], b[1], k), mix(a[2], b[2], k)]; }
 function season(m) { return [12, 1, 2].includes(m) ? "winter" : m <= 5 ? "spring" : m <= 8 ? "summer" : "autumn"; }
 
+let BG = null, BGK = ""; // sky, sun or moon and hills change slowly: drawn once into a canvas, refreshed every few minutes
 function meadow(t, night, hour, ss) {
-  const sky = night ? ["#0B1630", "#2E2560"] : skyFor(hour);
+  const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10);
+  if (bk !== BGK) { const c = BG || document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; BG = c; BGK = bk; }
+  g.drawImage(BG, 0, 0);
+  if (!night) for (let k = 0; k < 6; k++) { const x = ((t * (8 + k * 4) + k * 380) % (W + 400)) - 200, y = H * (.08 + .05 * (k % 3)), u = H * .05;
+    g.fillStyle = "rgba(255,255,255,.92)"; [[0, 0, 1], [1.2, -.4, 1.3], [2.4, 0, .9]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(x + dx * u, y + dy * u, r * u, 0, TAU); g.fill(); }); }
+  meadowLive(t, night, ss);
+}
+function meadowStatic(night, hour) {
+  const t = 0, sky = night ? ["#0B1630", "#2E2560"] : skyFor(hour);
   const sg = g.createLinearGradient(0, 0, 0, H * .72); sg.addColorStop(0, sky[0]); sg.addColorStop(1, sky[1]); g.fillStyle = sg; g.fillRect(0, 0, W, H);
   if (night) {
     const r = rng(3); for (let i = 0; i < 140; i++) { const tw = (Math.sin(t * 1.7 + i) + 1) / 2; g.fillStyle = `rgba(255,255,255,${.25 + .65 * tw})`; g.beginPath(); g.arc(r() * W, r() * H * .5, 1 + 1.8 * tw, 0, TAU); g.fill(); }
@@ -112,13 +121,13 @@ function meadow(t, night, hour, ss) {
   } else {
     const sx = W * .86, sy = H * .14, rg = g.createRadialGradient(sx, sy, 0, sx, sy, H * .35); rg.addColorStop(0, "rgba(255,245,157,.7)"); rg.addColorStop(1, "rgba(255,245,157,0)");
     g.fillStyle = rg; g.fillRect(0, 0, W, H * .6); g.fillStyle = "#FFD54F"; g.beginPath(); g.arc(sx, sy, H * .065, 0, TAU); g.fill();
-    for (let k = 0; k < 6; k++) { const x = ((t * (8 + k * 4) + k * 380) % (W + 400)) - 200, y = H * (.08 + .05 * (k % 3)), u = H * .05;
-      g.fillStyle = "rgba(255,255,255,.92)"; [[0, 0, 1], [1.2, -.4, 1.3], [2.4, 0, .9]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(x + dx * u, y + dy * u, r * u, 0, TAU); g.fill(); }); }
   }
   const hill = (y0, amp, ph, col, f) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += W / 80) g.lineTo(x, y0 + Math.sin(x / W * TAU * f + ph) * amp); g.lineTo(W, H); g.fill(); };
   hill(H * .55, H * .035, .5, night ? "#1C2E3A" : "#A8D5A2", 1.6);
   hill(H * .63, H * .03, 2, night ? "#1B3322" : "#86C26B", 2.1);
   hill(H * .71, H * .012, 4, night ? "#16301B" : "#6DB33F", 2.6);
+}
+function meadowLive(t, night, ss) {
   const r = rng(11);
   for (let i = 0; i < 45; i++) { const x = r() * W, y = H * (.74 + r() * .25), st = H * (.025 + r() * .035), bend = Math.sin(t * 1.4 + i) * H * .008;
     g.strokeStyle = night ? "#2E5A2E" : "#3E8E2E"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + bend, y - st); g.stroke();
@@ -144,7 +153,7 @@ function butterfly(b, flap, cx, cy, m, t) {
   if (im) { // illustrated species (img/b_<species>.webp): each half of the wings flaps, a small hue shift from the seed keeps every butterfly unique
     const h = m * .95, w = h * im.width / im.height, hue = (r() - .5) * 24;
     if (b.v === 1) { const gl = g.createRadialGradient(cx, cy, 0, cx, cy, m * .7); gl.addColorStop(0, "rgba(255,255,255,.55)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, m * .7, 0, TAU); g.fill(); }
-    const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src = gold ? tinted(im, "g" + b.s, "rgba(255,190,20,.6)") : im;
+    const hb = hue > 6 ? 8 : hue < -6 ? -8 : 0, src0 = gold ? tinted(im, "g" + b.s, "rgba(255,190,20,.6)") : im, src = sized((gold ? "bg" : "b") + b.s, src0, w, h);
     g.save();
     const fw = Math.max(.06, Math.abs(flap)), iw = im.width / 2;
     g.drawImage(src, 0, 0, src.width / 2, src.height, cx - w / 2 * fw, cy - h / 2, w / 2 * fw, h);
@@ -350,7 +359,11 @@ function tinted(im, key, filter) { let c = TINT[key]; if (c) return c;
   c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); return TINT[key] = c; } // no ctx.filter: old Cast browsers choke on it
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
-function spr(n, x, y, h, centre, flip, rot) { const im = SPR[n]; if (!im) return false; const w = h * im.width / im.height;
+const SIZED = {}; let SIZEDN = 0; // sprites pre-scaled to the size they are shown at: shrinking a big image every frame is slow on a TV
+function sized(n, im, w, h) { const k = n + "|" + Math.round(h); let c = SIZED[k]; if (c) return c;
+  if (SIZEDN > 300) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
+  c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); SIZEDN++; return SIZED[k] = c; }
+function spr(n, x, y, h, centre, flip, rot) { let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);
   g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); 
   g.drawImage(im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
 function ladybug(x, y, r, ang, flying, t) {
@@ -417,9 +430,11 @@ function larva(p, x, base, u, t, sleep) {
 }
 
 // ---------- flight: free, visits, rest, shelters, chases (like Garden.kt) ----------
+const FLYP = {}, SEEDS = {};
 function fly(i, seed, t, sp, n, depth = 0) {
-  const r = jrandom(mixSeed(seed * 31n + BigInt(i)));
-  const a = r() * TAU, b = r() * TAU, sx = .02 + r() * .03, sy = .12 + r() * .2, period = 26 + r() * 14, phase = r() * period;
+  const pk = seed + ":" + i; let P = FLYP[pk]; // the flight constants of a butterfly never change: BigInt maths once, not every frame
+  if (!P) { const r = jrandom(mixSeed(seed * 31n + BigInt(i))); const a = r() * TAU, b = r() * TAU, sx = .02 + r() * .03, sy = .12 + r() * .2, period = 26 + r() * 14; P = FLYP[pk] = [a, b, sx, sy, period, r() * period]; }
+  const [a, b, sx, sy, period, phase] = P;
   const free = tt => ({ x: W * (.5 + .47 * Math.sin(tt * sx + a)), y: H * (.33 + .2 * Math.sin(tt * sy + b)) });
   const cycle = Math.floor((t + phase) / period), u = t + phase - cycle * period, roll = hash(i + 1, cycle);
   const k = u < 13 ? 0 : u < 16 ? ease((u - 13) / 3) : u < 22 ? 1 : u < 25 ? 1 - ease((u - 22) / 3) : 0;
@@ -459,7 +474,7 @@ function frame(now) {
     if (BIRTH) { const age = t - BIRTH.t; if (age > 11) BIRTH = null; else { g.save(); g.globalAlpha = Math.min(1, age / .6, (11 - age) / .8); birth(BIRTH.b, age, t); g.restore(); } }
     if (STAT.frames % 60 === 1) { // what the canvas really holds (sample near the top-left)
       STAT.cv = cv.width + "x" + cv.height + " css " + cv.clientWidth + "x" + cv.clientHeight;
-      const d = g.getImageData(20, 20, 1, 1).data; STAT.px = d[0] + "," + d[1] + "," + d[2];
+      // no getImageData here: reading pixels back stalls the TV graphics chip
     }
   } catch (e) { showErr(e); }
 }
@@ -626,7 +641,7 @@ function draw(now) {
   meadow(t, night, hour, ss);
   const laid = d.decos.slice().sort((p, q) => p.y - q.y).map(p => ({ p, x: p.x * W, y: groundY(p.y), u: unitAt(p.y) }));
   const sp = []; laid.forEach((l, i) => sp.push(...spots(l.p.id, l.x, l.y, l.u, i)));
-  const bs = d.butterflies.slice(-40), ft = flightT(), seeds = bs.map(b => BigInt(b.sd || Math.round(b.seed || 0))), flies = bs.map((b, i) => fly(i, seeds[i], ft, sp, bs.length));
+  const bs = d.butterflies.slice(-40), ft = flightT(), seeds = bs.map(b => SEEDS[b.sd || b.seed] || (SEEDS[b.sd || b.seed] = BigInt(b.sd || Math.round(b.seed || 0)))), flies = bs.map((b, i) => fly(i, seeds[i], ft, sp, bs.length));
   const busy = new Set(flies.filter(f => f.spot >= 0).map(f => sp[f.spot].deco));
   NIGHTD = night; ANTHOME = null;
   laid.forEach((l, i) => deco(l.p.id, l.x, l.y, l.u, t, ss, busy.has(i), d.pet));

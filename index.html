@@ -144,10 +144,11 @@ function butterfly(b, flap, cx, cy, m, t) {
   if (im) { // illustrated species (img/b_<species>.webp): each half of the wings flaps, a small hue shift from the seed keeps every butterfly unique
     const h = m * .95, w = h * im.width / im.height, hue = (r() - .5) * 24;
     if (b.v === 1) { const gl = g.createRadialGradient(cx, cy, 0, cx, cy, m * .7); gl.addColorStop(0, "rgba(255,255,255,.55)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, m * .7, 0, TAU); g.fill(); }
-    g.save(); g.filter = gold ? "sepia(1) saturate(3) hue-rotate(-8deg) brightness(1.12)" : `hue-rotate(${hue}deg)`;
+    const hb = Math.round(hue / 8) * 8, src = gold ? tinted(im, "g" + b.s, "sepia(1) saturate(3) hue-rotate(-8deg) brightness(1.12)") : hb ? tinted(im, b.s + ":" + hb, `hue-rotate(${hb}deg)`) : im;
+    g.save();
     const fw = Math.max(.06, Math.abs(flap)), iw = im.width / 2;
-    g.drawImage(im, 0, 0, iw, im.height, cx - w / 2 * fw, cy - h / 2, w / 2 * fw, h);
-    g.drawImage(im, iw, 0, iw, im.height, cx, cy - h / 2, w / 2 * fw, h);
+    g.drawImage(src, 0, 0, iw, im.height, cx - w / 2 * fw, cy - h / 2, w / 2 * fw, h);
+    g.drawImage(src, iw, 0, iw, im.height, cx, cy - h / 2, w / 2 * fw, h);
     g.restore();
   } else {
   let w1 = hex(b.w1), w2 = hex(b.w2), acc = hex(b.a);
@@ -343,11 +344,14 @@ function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, 
   g.beginPath(); g.moveTo(x - r * .98, y - r * .05); g.lineTo(x + r * .98, y - r * .05); g.lineTo(x, y + r * .95); g.fill(); }
 // the friends, with shading, outlines and highlights like the decorations
 const DS = {perch: ["d_perch", 1.3, -0.13, 0], house: ["d_house", 2.5, 0, 0.05], mushroom: ["d_mushroom", 1.75, 0, 0.05], swing: ["d_swing", 2.2, 0, 0.05], fountain: ["d_fountain", 1.75, 0, 0.05], tree: ["d_tree", 3.6, 0, 0.05], arch: ["d_arch", 2.4, 0, 0.05], pond: ["d_pond", 1.2, 0, 0.45]}; // illustrated decorations: same table as DECO_ART in Garden.kt
+const TINT = {}; // filtered copies made once (canvas filters every frame are far too slow on a TV)
+function tinted(im, key, filter) { let c = TINT[key]; if (c) return c;
+  c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const x = c.getContext("2d"); x.filter = filter; x.drawImage(im, 0, 0); return TINT[key] = c; }
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 function spr(n, x, y, h, centre, flip, rot) { const im = SPR[n]; if (!im) return false; const w = h * im.width / im.height;
-  g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); if (NIGHTD) g.filter = "brightness(.65) saturate(.8)";
-  g.drawImage(im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
+  g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); 
+  g.drawImage(NIGHTD ? tinted(im, "n" + n, "brightness(.65) saturate(.8)") : im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
 function ladybug(x, y, r, ang, flying, t) {
   if (spr(flying > 0 ? (Math.sin(t * 22) > 0 ? "f_lady_f1" : "f_lady_f2") : "f_ladybug", x, y, r * (flying > 0 ? 3.8 : 3.4), true, flying > 0 && Math.cos(ang * 3) < 0, ang * .4)) return;
   g.save(); g.translate(x, y); g.rotate(ang); const ink = "rgba(43,42,38,.85)";
@@ -429,15 +433,18 @@ function fly(i, seed, t, sp, n, depth = 0) {
     flap: resting ? .8 + .2 * Math.abs(Math.cos(t * 1.2 + i)) : .45 + .55 * Math.abs(Math.cos(t * 6 + i)), tilt: resting ? 0 : Math.sin(t + i) * .2 };
 }
 
+let FPS = 0, FPSN = 0, FPST = 0;
 function frame(now) {
   requestAnimationFrame(frame); // keep going even if one frame fails
   try {
     STAT.frames++;
+    FPSN++; if (now - FPST > 1000) { FPS = Math.round(FPSN * 1000 / (now - FPST)); FPSN = 0; FPST = now; }
     resize();
     const t = (now - T0) / 1000;
     // the HTML splash stays at least 1.5 s and until the phone has sent the garden, then a 1.2 s cross-fade
     const fade = GOT ? Math.min(1, Math.max(0, (t - Math.max(1.5, GOT)) / 1.2)) : 0;
     if (fade > 0) draw(now);
+    if (fade > 0) { g.save(); g.font = "600 14px sans-serif"; g.fillStyle = "rgba(255,255,255,.8)"; g.textAlign = "right"; g.textBaseline = "alphabetic"; g.fillText(FPS + " fps", W - 14, H - 12); g.restore(); } // temporary: frame rate check
     const sp = document.getElementById("splash"); if (sp && fade > 0) { sp.style.opacity = String(1 - fade); if (fade >= 1) sp.remove(); }
     if (ROOM || ROOMCLOSE) { const R = ROOMS[(ROOM || ROOMCLOSE).id];
       if (R && R !== "loading") { const k = ROOM ? Math.min(1, (t - ROOM.open) / .6) : 1 - Math.min(1, (t - ROOMCLOSE.t) / .5);

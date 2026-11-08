@@ -106,10 +106,9 @@ function season(m) { return [12, 1, 2].includes(m) ? "winter" : m <= 5 ? "spring
 let BG = null, BGK = ""; // sky, sun or moon and hills change slowly: drawn once into a canvas, refreshed every few minutes
 function meadow(t, night, hour, ss) {
   const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10);
-  g.fillStyle = night ? "#0B1630" : "#8fc3e8"; g.fillRect(0, 0, W, H); // always cover the last frame
-  if (!CACHE_OK) meadowStatic(night, hour);
+  if (!CACHE_OK) meadowStatic(night, hour); // its sky gradient covers the last frame
   else if (bk !== BGK) { BGK = bk; const c = document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; asImage(c, i => { if (BGK === bk) BG = i; }); }
-  if (CACHE_OK) { if (BG && BG.width === W && BG.height === H) g.drawImage(BG, 0, 0); else meadowStatic(night, hour); }
+  if (CACHE_OK) { if (BG && BG.width === W && BG.height === H && BG.complete) g.drawImage(BG, 0, 0); else meadowStatic(night, hour); } // one full-screen paint per frame: boxes are limited by pixels painted
   if (!night) for (let k = 0; k < 6; k++) { const x = ((t * (8 + k * 4) + k * 380) % (W + 400)) - 200, y = H * (.08 + .05 * (k % 3)), u = H * .05;
     g.fillStyle = "rgba(255,255,255,.92)"; [[0, 0, 1], [1.2, -.4, 1.3], [2.4, 0, .9]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(x + dx * u, y + dy * u, r * u, 0, TAU); g.fill(); }); }
   meadowLive(t, night, ss);

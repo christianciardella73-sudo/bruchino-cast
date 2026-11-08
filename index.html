@@ -370,7 +370,7 @@ function bee(x, y, r, t, faceLeft) {
   g.restore();
 }
 function ant(x, y, r, t, left, walk, carry) {
-  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr(SPR.f_antw0 ? "f_antw" + (walk ? Math.floor(t * 10) % 4 : 0) : walk && Math.sin(t * 9) > 0 ? "f_ant2" : "f_ant", x, y + r * .8 - st * r * .04, r * 3.2, false, left, walk ? Math.sin(t * 14) * .05 : 0);
+  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr(SPR.f_antw0 ? (walk ? ["f_antw0", "f_ant", "f_antw1", "f_antw2", "f_ant2", "f_antw3"][Math.floor(t * 10) % 6] : "f_antw0") : walk && Math.sin(t * 9) > 0 ? "f_ant2" : "f_ant", x, y + r * .8 - st * r * .04, r * 3.2, false, left, walk ? Math.sin(t * 14) * .05 : 0);
     if (carry) { g.save(); g.translate(x, y - r * 1.5); g.fillStyle = "#43A047"; g.beginPath(); g.ellipse(0, 0, r * .6, r * .28, .2, 0, TAU); g.fill(); g.restore(); } return; }
   g.save(); g.translate(x, y); if (left) g.scale(-1, 1); const ink = "#2B2A26";
   g.strokeStyle = ink; g.lineWidth = r * .1; g.lineCap = "round";

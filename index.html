@@ -448,7 +448,15 @@ function larva(p, x, base, u, t, sleep) {
   if (p.stage === "COCOON") { const c = new Path2D(); c.ellipse(x, base - u * .9, u * .35, u * .8, 0, 0, TAU); fillStroke(c, grad(base - u * 1.7, base, "#B08968"), u * .06); return; }
   const n = 4 + (p.level || 0) * 2, r = u * .32, sp = r * 1.3, x0 = x - sp * (n - 1) / 2;
   for (let i = 0; i < n; i++) { const hu = Math.pow(Math.max(0, Math.sin(t * 2.5 - i * .75)), 2), rr = i === n - 1 ? r * 1.3 : r, cx = x0 + i * sp, cy = base - rr - hu * r * .8;
-    fillStroke(oval(cx, cy, rr, rr), grad(cy - rr, cy + rr, hex(i % 2 ? p.body2 : p.body)), u * .05);
+    // body with volume, like the app: contact shadow, round shading, shine, little hairs, legs, pattern from the seed
+    g.fillStyle = "rgba(0,0,0,.12)"; g.beginPath(); g.ellipse(cx, base - rr * .06, rr * .75, rr * .16, 0, 0, TAU); g.fill();
+    { const col = hex(i % 2 ? p.body2 : p.body), rg = g.createRadialGradient(cx - rr * .35, cy - rr * .45, 0, cx - rr * .35, cy - rr * .45, rr * 1.6);
+      rg.addColorStop(0, mix(col, "#ffffff", .35)); rg.addColorStop(.45, col); rg.addColorStop(1, mix(col, "#000000", .28)); fillStroke(oval(cx, cy, rr, rr), rg, u * .05);
+      g.fillStyle = "rgba(255,255,255,.45)"; g.beginPath(); g.ellipse(cx - rr * .32, cy - rr * .55, rr * .23, rr * .15, -.4, 0, TAU); g.fill();
+      if (i < n - 1) { g.strokeStyle = "rgba(43,42,38,.5)"; g.lineWidth = u * .025; for (let k = -1; k <= 1; k++) { const a = -Math.PI / 2 + k * .45; g.beginPath(); g.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); g.lineTo(cx + Math.cos(a) * rr * 1.22, cy + Math.sin(a) * rr * 1.22); g.stroke(); }
+        if ((p.pattern || 0) === 0) { g.fillStyle = hex(p.antenna); g.globalAlpha = .85; g.beginPath(); g.arc(cx, cy - rr * .4, rr * .2, 0, TAU); g.fill(); g.globalAlpha = 1; }
+        const st = Math.sin(t * 6 + i) * rr * .15; g.strokeStyle = INK; g.lineWidth = u * .04; g.beginPath(); g.moveTo(cx - rr * .3, cy + rr * .9); g.lineTo(cx - rr * .4 + st, cy + rr * 1.15); g.stroke(); }
+      else { g.fillStyle = "rgba(255,120,140,.45)"; for (const s of [-1, 1]) { g.beginPath(); g.arc(cx + s * rr * .62, cy + rr * .25, rr * .14, 0, TAU); g.fill(); } } }
     if (i === n - 1) { if (sleep) { g.strokeStyle = INK; g.lineWidth = u * .05; for (const s of [-1, 1]) { g.beginPath(); g.arc(cx + s * rr * .38, cy - rr * .2, rr * .17, .2, Math.PI - .2); g.stroke(); } } else {
       g.fillStyle = "#fff"; for (const s of [-1, 1]) { g.beginPath(); g.arc(cx + s * rr * .38, cy - rr * .15, rr * .25, 0, TAU); g.fill(); }
       g.fillStyle = INK; for (const s of [-1, 1]) { g.beginPath(); g.arc(cx + s * rr * .38, cy - rr * .15, rr * .13, 0, TAU); g.fill(); } }

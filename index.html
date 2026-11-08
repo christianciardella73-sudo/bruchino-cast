@@ -190,10 +190,13 @@ function deco(id, x, y, u, t, ss, busy, pet) {
   const fl = (fx, fy, r, c) => { g.fillStyle = col(c); for (let k = 0; k < 5; k++) { const a = k * TAU / 5; g.beginPath(); g.arc(fx + Math.cos(a) * r * 1.05, fy + Math.sin(a) * r * 1.05, r, 0, TAU); g.fill(); } g.fillStyle = col("#FFB300"); g.beginPath(); g.arc(fx, fy, r * .75, 0, TAU); g.fill(); };
   const line = (x0, y0, x1, y1, c, w) => { g.strokeStyle = c; g.lineWidth = w; g.lineCap = "round"; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
   const sh = g.createRadialGradient(x, y, 0, x, y, u * 1.1); sh.addColorStop(0, "rgba(0,0,0,.22)"); sh.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = sh; g.beginPath(); g.ellipse(x, y, u * 1.1, u * .15, 0, 0, TAU); g.fill();
+  const DA = DS[id]; if (DA && spr(DA[0], x + u * DA[2], y + u * DA[3], u * DA[1]) && id !== "perch") return;
   if (id === "perch") {
+    if (!SPR.d_perch) {
     rect(x - u * .07, y - u * 1.15, u * .14, u * 1.15, "#8D6E63", u * .05);
     const lp = new Path2D(); lp.moveTo(x - u * .6, y - u * 1.1); lp.quadraticCurveTo(x, y - u * 1.55, x + u * .6, y - u * 1.1); lp.quadraticCurveTo(x, y - u * .95, x - u * .6, y - u * 1.1); lp.closePath(); shp(lp, "#66BB6A", y - u * 1.4, y - u);
     line(x - u * .5, y - u * 1.12, x + u * .5, y - u * 1.2, col("#2E7D32"), u * .03);
+    }
     // tapped on the phone: two happy hops and hearts (same as Garden.kt)
     const j = t - JOY, hop = j >= 0 && j < 1.6 ? Math.abs(Math.sin(j / .8 * Math.PI)) * u * .45 * (1 - j / 1.6) : 0;
     if (pet && j >= 0 && j < 2.6) for (let k = 0; k < 6; k++) { const a = j - k * .22; if (a < 0 || a > 1.6) continue;
@@ -328,13 +331,14 @@ function deco(id, x, y, u, t, ss, busy, pet) {
 function heart(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x - r * .45, y - r * .2, r * .55, 0, TAU); g.arc(x + r * .45, y - r * .2, r * .55, 0, TAU); g.fill();
   g.beginPath(); g.moveTo(x - r * .98, y - r * .05); g.lineTo(x + r * .98, y - r * .05); g.lineTo(x, y + r * .95); g.fill(); }
 // the friends, with shading, outlines and highlights like the decorations
-const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
+const DS = {perch: ["d_perch", 1.3, -0.13, 0], house: ["d_house", 2.5, 0, 0.05], mushroom: ["d_mushroom", 1.75, 0, 0.05], swing: ["d_swing", 2.2, 0, 0.05], fountain: ["d_fountain", 1.75, 0, 0.05], tree: ["d_tree", 3.6, 0, 0.05], arch: ["d_arch", 2.4, 0, 0.05], pond: ["d_pond", 1.2, 0, 0.45]}; // illustrated decorations: same table as DECO_ART in Garden.kt
+const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_lady_f1", "f_lady_f2", "f_bee2"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 function spr(n, x, y, h, centre, flip, rot) { const im = SPR[n]; if (!im) return false; const w = h * im.width / im.height;
   g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); if (NIGHTD) g.filter = "brightness(.65) saturate(.8)";
   g.drawImage(im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
 function ladybug(x, y, r, ang, flying, t) {
-  if (spr("f_ladybug", x, y, r * 2.6, true, flying > 0 && Math.cos(ang * 3) < 0, ang * .4)) return;
+  if (spr(flying > 0 ? (Math.sin(t * 22) > 0 ? "f_lady_f1" : "f_lady_f2") : "f_ladybug", x, y, r * (flying > 0 ? 3.8 : 3.4), true, flying > 0 && Math.cos(ang * 3) < 0, ang * .4)) return;
   g.save(); g.translate(x, y); g.rotate(ang); const ink = "rgba(43,42,38,.85)";
   if (flying > 0) { const f = Math.abs(Math.sin(t * 30)); g.fillStyle = "rgba(255,255,255,.55)"; [-1, 1].forEach(s => { g.beginPath(); g.ellipse(s * r * .55, -r * .5 - f * r * .2, r * .45, r * .25, s * .6, 0, TAU); g.fill(); }); }
   g.strokeStyle = ink; g.lineWidth = r * .08; for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(s * r * .5, (k - 1) * r * .45); g.lineTo(s * r * 1.05, (k - 1) * r * .55 + Math.sin(t * 9 + k) * r * .06); g.stroke(); }
@@ -349,7 +353,7 @@ function ladybug(x, y, r, ang, flying, t) {
   g.restore();
 }
 function bee(x, y, r, t, faceLeft) {
-  if (spr("f_bee", x, y + Math.sin(t * 9) * r * .08, r * 2.8, true, faceLeft, Math.sin(t * 5) * .1)) return;
+  if (spr(Math.sin(t * 24) > 0 ? "f_bee" : "f_bee2", x, y + Math.sin(t * 9) * r * .08, r * 3.6, true, faceLeft, Math.sin(t * 5) * .1)) return;
   g.save(); g.translate(x, y); if (faceLeft) g.scale(-1, 1); const ink = "rgba(43,42,38,.85)", f = Math.abs(Math.sin(t * 32));
   g.fillStyle = "rgba(225,245,254,.7)"; g.strokeStyle = "rgba(120,144,156,.6)"; g.lineWidth = r * .05;
   [[-.15, 1], [.2, .8]].forEach(([dx, k]) => { g.beginPath(); g.ellipse(dx * r, -r * (.75 + .25 * f), r * .45 * k, r * .65 * k, -.3 + dx, 0, TAU); g.fill(); g.stroke(); });
@@ -366,7 +370,7 @@ function bee(x, y, r, t, faceLeft) {
   g.restore();
 }
 function ant(x, y, r, t, left, walk, carry) {
-  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr("f_ant", x, y + r * .8 - st * r * .12, r * 2.4, false, left, walk ? Math.sin(t * 14) * .05 : 0);
+  if (SPR.f_ant) { const st = walk ? Math.abs(Math.sin(t * 14)) : 0; spr(walk && Math.sin(t * 9) > 0 ? "f_ant2" : "f_ant", x, y + r * .8 - st * r * .1, r * 3.2, false, left, walk ? Math.sin(t * 14) * .05 : 0);
     if (carry) { g.save(); g.translate(x, y - r * 1.5); g.fillStyle = "#43A047"; g.beginPath(); g.ellipse(0, 0, r * .6, r * .28, .2, 0, TAU); g.fill(); g.restore(); } return; }
   g.save(); g.translate(x, y); if (left) g.scale(-1, 1); const ink = "#2B2A26";
   g.strokeStyle = ink; g.lineWidth = r * .1; g.lineCap = "round";

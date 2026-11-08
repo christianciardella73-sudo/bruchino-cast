@@ -382,7 +382,7 @@ function tinted(im, key, filter) { if (!CACHE_OK) return im; let c = TINT[key]; 
   TINT[key] = im; c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); asImage(c, i => TINT[key] = i); return im; } // no ctx.filter: old Cast browsers choke on it
 const RIMG = {}; // room pictures, loaded when a room first needs them
 function roomImg(n) { let im = RIMG[n]; if (!im) { im = RIMG[n] = new Image(); im.src = "img/" + n + ".webp"; } return im.complete && im.naturalWidth ? im : null; }
-const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "d_tree_spring", "d_tree_autumn", "d_tree_winter", "g_land_spring", "g_land_summer", "g_land_autumn", "g_land_winter", "g_cloud0", "g_cloud1", "g_cloud2", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
+const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "d_tree_spring", "d_tree_autumn", "d_tree_winter", "g_land_spring", "g_land_summer", "g_land_autumn", "g_land_winter", "g_cloud0", "g_cloud1", "g_cloud2", "p_egg", "p_cocoon", "g_nectar", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
 // illustrated sprite (same files as the app), standing on (x, y) or centred; false while not loaded
 // NVIDIA Shield (Tegra): shows black with offscreen canvases; it reports the same browser as other Android TV boxes, so the graphics chip tells them apart
 let SEASON = "summer"; const LITE = window.LITE = false, GPU = ""; // no per-device modes: everything drawn on screen is a plain image // NVIDIA Shield: no offscreen canvases (it showed black)
@@ -444,8 +444,11 @@ function ant(x, y, r, t, left, walk, carry) {
 }
 // the current caterpillar (or egg / cocoon), small, on the perch
 function larva(p, x, base, u, t, sleep) {
-  if (p.stage === "EGG") { fillStroke(oval(x, base - u * .7, u * .5, u * .7), grad(base - u * 1.4, base, hex(p.eggColor)), u * .06); return; }
-  if (p.stage === "COCOON") { const c = new Path2D(); c.ellipse(x, base - u * .9, u * .35, u * .8, 0, 0, TAU); fillStroke(c, grad(base - u * 1.7, base, "#B08968"), u * .06); return; }
+  if (p.stage === "EGG") { if (SPR.p_egg) { const h = u * 1.4, w = h * SPR.p_egg.width / SPR.p_egg.height, im = tinted(SPR.p_egg, "egg" + p.eggColor, hex(p.eggColor) + "99");
+      g.save(); g.translate(x, base); g.rotate(Math.sin(t * 3) * .05); g.drawImage(im, -w / 2, -h, w, h); g.restore(); }
+    else fillStroke(oval(x, base - u * .7, u * .5, u * .7), grad(base - u * 1.4, base, hex(p.eggColor)), u * .06); return; }
+  if (p.stage === "COCOON") { if (SPR.p_cocoon) { const h = u * 2.4, w = h * SPR.p_cocoon.width / SPR.p_cocoon.height; g.save(); g.translate(x, base - h); g.rotate(Math.sin(t) * .06); g.drawImage(SPR.p_cocoon, -w / 2, 0, w, h); g.restore(); }
+    else { const c = new Path2D(); c.ellipse(x, base - u * .9, u * .35, u * .8, 0, 0, TAU); fillStroke(c, grad(base - u * 1.7, base, "#B08968"), u * .06); } return; }
   const n = 4 + (p.level || 0) * 2, r = u * .32, sp = r * 1.3, x0 = x - sp * (n - 1) / 2;
   for (let i = 0; i < n; i++) { const hu = Math.pow(Math.max(0, Math.sin(t * 2.5 - i * .75)), 2), rr = i === n - 1 ? r * 1.3 : r, cx = x0 + i * sp, cy = base - rr - hu * r * .8;
     // body with volume, like the app: contact shadow, round shading, shine, little hairs, legs, pattern from the seed
@@ -531,8 +534,10 @@ function birth(b, a, t) {
   const open = Math.min(1, Math.max(0, (a - split) / 1.2));
   if (open < 1) for (const side of [-1, 1]) { g.save(); const fall = open * open; g.translate(cx + side * open * m * .5, cy + fall * H * .7); g.rotate(side * fall * 1.2 + Math.sin(a * 40) * .03 * (a > 1.8 && a < split ? 1 : 0));
     g.beginPath(); g.rect(side < 0 ? -m : 0, -m, m, 2 * m); g.clip(); const sc = 1 + .07 * beat;
-    const c = new Path2D(); c.ellipse(0, 0, m * .17 * sc, m * .36, 0, 0, TAU); fillStroke(c, grad(-m * .36, m * .36, mix("#B08968", wc, .3 * inner)), m * .012);
-    g.globalAlpha *= .6 * inner; g.fillStyle = wc; g.fill(c); g.restore(); }
+    const c = new Path2D(); c.ellipse(0, 0, m * .17 * sc, m * .36, 0, 0, TAU);
+    if (SPR.p_cocoon) { const ah = m * .72 / .68, aw = ah * SPR.p_cocoon.width / SPR.p_cocoon.height; g.drawImage(SPR.p_cocoon, -aw / 2 * sc, m * .36 - ah, aw * sc, ah); }
+    else fillStroke(c, grad(-m * .36, m * .36, mix("#B08968", wc, .3 * inner)), m * .012);
+    g.globalAlpha *= .45 * inner; g.fillStyle = wc; g.fill(c); g.restore(); }
   if (a > split && a < split + .5) { g.fillStyle = `rgba(255,255,255,${.85 * (1 - (a - split) / .5)})`; g.fillRect(0, 0, W, H); }
   // the butterfly: unfolds, flies a loop, lands
   if (a > split) {
@@ -699,10 +704,10 @@ function draw(now) {
     nx = NECTAR.x * W; ny = groundY(Math.min(1, Math.max(0, NECTAR.d || 0)));
     pull = ease(age / 2.5) * (1 - ease((age - 11) / 3));
     const gr = ease(age / .8), u = unitAt(.5);
-    g.strokeStyle = "#3E8E2E"; g.lineWidth = u * .08; g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx, ny - u * 1.1 * gr); g.stroke();
+    const art = SPR.g_nectar && gr > .02; if (!art) { g.strokeStyle = "#3E8E2E"; g.lineWidth = u * .08; g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx, ny - u * 1.1 * gr); g.stroke(); }
     const gl = g.createRadialGradient(nx, ny - u * 1.1 * gr, 0, nx, ny - u * 1.1 * gr, u * 1.4); gl.addColorStop(0, "rgba(255,245,157,.6)"); gl.addColorStop(1, "rgba(255,245,157,0)");
     g.fillStyle = gl; g.beginPath(); g.arc(nx, ny - u * 1.1 * gr, u * 1.4, 0, TAU); g.fill();
-    flower(nx, ny - u * 1.1 * gr, u * .22 * gr, "#F48FB1"); } }
+    if (art) spr("g_nectar", nx, ny, u * 1.5 * gr); else flower(nx, ny - u * 1.1 * gr, u * .22 * gr, "#F48FB1"); } }
   bs.forEach((b, i) => { const f = flies[i]; if (f.alpha <= .01) return;
     if (pull > 0) { const a = i * 2.4 + ft * .6, rr = H * (.06 + .03 * (i % 3)), k = pull * .9;
       f.x += (nx + Math.cos(a) * rr - f.x) * k; f.y += (ny - unitAt(.5) * 1.3 + Math.sin(a) * rr * .6 - f.y) * k; }

@@ -41,9 +41,6 @@
 "use strict";
 const NS = "urn:x-cast:cloud.shazam.bruchino";
 const cv = document.getElementById("c"); let g = cv.getContext("2d", { alpha: false });
-// Prepared (offscreen) canvases are kept in memory, not on the graphics chip: on the NVIDIA Shield the chip-backed ones
-// came out empty, so nothing could be prepared and every frame was drawn from scratch (slow).
-const SOFT = { willReadFrequently: true };
 // older Chromecasts: no roundRect on paths
 if (!Path2D.prototype.roundRect) Path2D.prototype.roundRect = function (x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
@@ -110,7 +107,7 @@ let BG = null, BGK = ""; // sky, sun or moon and hills change slowly: drawn once
 function meadow(t, night, hour, ss) {
   const bk = W + "x" + H + (night ? "n" : "d") + Math.round(hour * 10) + SEASON + (SPR["g_land_" + SEASON] ? 1 : 0);
   if (!CACHE_OK) meadowStatic(night, hour); // its sky gradient covers the last frame
-  else if (bk !== BGK) { BGK = bk; const c = document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d", SOFT); meadowStatic(night, hour); g = g0; asImage(c, i => { if (BGK === bk) BG = i; }); }
+  else if (bk !== BGK) { BGK = bk; const c = document.createElement("canvas"); c.width = W; c.height = H; const g0 = g; g = c.getContext("2d"); meadowStatic(night, hour); g = g0; asImage(c, i => { if (BGK === bk) BG = i; }); }
   if (CACHE_OK) { if (BG && BG.width === W && BG.height === H && BG.complete) g.drawImage(BG, 0, 0); else meadowStatic(night, hour); } // one full-screen paint per frame: boxes are limited by pixels painted
   if (!night) for (let k = 0; k < 5; k++) { const cl = SPR["g_cloud" + (k % 3)], ch = H * (.09 + .03 * (k % 3)); if (!cl) continue; const cw = ch * cl.width / cl.height;
     const x = ((t * (6 + k * 3) + k * 420) % (W + cw * 2)) - cw, y = H * (.05 + .06 * (k % 3)); g.drawImage(cl, x, y, cw, ch); } // illustrated clouds drifting
@@ -374,15 +371,15 @@ const DS = {perch: ["d_perch", 1.3, -0.13, 0], house: ["d_house", 2.5, 0, 0.05],
 // a prepared canvas becomes a plain image before it is ever drawn on screen: some TV boxes (e.g. NVIDIA Shield) show black when a canvas is drawn onto the screen canvas
 // self-test at start: on some boxes (NVIDIA Shield) a prepared canvas comes out empty; then everything is drawn directly
 let CACHE_OK = false;
-(function selfTest() { try { const a = document.createElement("canvas"); a.width = a.height = 4; const x = a.getContext("2d", SOFT); x.fillStyle = "#f00"; x.fillRect(0, 0, 4, 4);
-  const im = new Image(); im.onload = () => { try { const b = document.createElement("canvas"); b.width = b.height = 4; const y = b.getContext("2d", SOFT); y.drawImage(im, 0, 0);
+(function selfTest() { try { const a = document.createElement("canvas"); a.width = a.height = 4; const x = a.getContext("2d"); x.fillStyle = "#f00"; x.fillRect(0, 0, 4, 4);
+  const im = new Image(); im.onload = () => { try { const b = document.createElement("canvas"); b.width = b.height = 4; const y = b.getContext("2d"); y.drawImage(im, 0, 0);
     const d = y.getImageData(1, 1, 1, 1).data; CACHE_OK = d[0] > 200 && d[1] < 60 && d[3] > 200; } catch (e) { CACHE_OK = false; } STAT.cache = CACHE_OK ? "ok" : "off"; };
   im.src = a.toDataURL("image/png"); } catch (e) { CACHE_OK = false; } })();
 function asImage(c, done) { const im = new Image(); im.onload = () => done(im); im.src = c.toDataURL("image/png"); }
 const TINT = {}; // filtered copies made once (canvas filters every frame are far too slow on a TV)
 function tinted(im, key, filter) { if (!CACHE_OK) return im; let c = TINT[key]; if (c) return c;
   const k = Math.min(1, 140 / Math.max(im.width, im.height)); // small copies: TV memory is tight
-  TINT[key] = im; c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d", SOFT); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); asImage(c, i => TINT[key] = i); return im; } // no ctx.filter: old Cast browsers choke on it
+  TINT[key] = im; c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); const x = c.getContext("2d"); x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "source-atop"; x.fillStyle = filter; x.fillRect(0, 0, c.width, c.height); asImage(c, i => TINT[key] = i); return im; } // no ctx.filter: old Cast browsers choke on it
 const RIMG = {}; // room pictures, loaded when a room first needs them
 function roomImg(n) { let im = RIMG[n]; if (!im) { im = RIMG[n] = new Image(); im.src = "img/" + n + ".webp"; } return im.complete && im.naturalWidth ? im : null; }
 const SPR = {}; ["f_anthill", "f_ant", "f_ladybug", "f_leaf", "f_bee", "f_hive", "d_perch", "d_house", "d_mushroom", "d_swing", "d_fountain", "d_tree", "d_arch", "d_pond", "f_ant2", "f_antw0", "f_antw1", "f_antw2", "f_antw3", "f_lady_f1", "f_lady_f2", "f_bee2", "d_tree_spring", "d_tree_autumn", "d_tree_winter", "g_land_spring", "g_land_summer", "g_land_autumn", "g_land_winter", "g_cloud0", "g_cloud1", "g_cloud2", "p_egg", "p_cocoon", "p_twig", "p_cocoon_body", "g_nectar", "b_0", "b_1", "b_2", "b_3", "b_4", "b_5", "b_6", "b_7", "b_8", "b_9", "b_10", "b_11", "b_12", "b_13", "b_14", "b_15"].forEach(n => { const im = new Image(); im.onload = () => SPR[n] = im; im.src = "img/" + n + ".webp"; });
@@ -392,7 +389,7 @@ let SEASON = "summer"; const LITE = window.LITE = false, GPU = ""; // no per-dev
 const SIZED = {}; let SIZEDN = 0; // sprites pre-scaled to the size they are shown at: shrinking a big image every frame is slow on a TV
 function sized(n, im, w, h) { if (!CACHE_OK) return im; const q = Math.max(8, Math.ceil(h / 12) * 12); w = w * q / h; h = q; const k = n + "|" + q; /* size steps: moving sprites reuse a few copies */ let c = SIZED[k]; if (c) return c;
   if (SIZEDN > 40) { for (const q in SIZED) delete SIZED[q]; SIZEDN = 0; }
-  SIZED[k] = im; SIZEDN++; c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d", SOFT).drawImage(im, 0, 0, c.width, c.height); asImage(c, i => SIZED[k] = i); return im; }
+  SIZED[k] = im; SIZEDN++; c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); asImage(c, i => SIZED[k] = i); return im; }
 function spr(n, x, y, h, centre, flip, rot) { if (n === "d_tree" && SPR["d_tree_" + SEASON]) n = "d_tree_" + SEASON; let im = SPR[n]; if (!im) return false; const w = h * im.width / im.height; im = sized(n, im, w, h);
   g.save(); g.translate(x, y); if (rot) g.rotate(rot); if (flip) g.scale(-1, 1); if (NIGHTD) g.globalAlpha *= .72; // evening: the dark sky shows through, no filters 
   g.drawImage(im, -w / 2, centre ? -h / 2 : -h, w, h); g.restore(); return true; }
@@ -503,7 +500,7 @@ function frame(now) {
     // the HTML splash stays at least 1.5 s and until the phone has sent the garden, then a 1.2 s cross-fade
     const fade = GOT ? Math.min(1, Math.max(0, (t - Math.max(1.5, GOT)) / 1.2)) : 0;
     if (fade > 0) draw(now);
-    if (fade > 0) { g.save(); g.font = "600 14px sans-serif"; g.fillStyle = "rgba(255,255,255,.8)"; g.textAlign = "right"; g.textBaseline = "alphabetic"; g.fillText(FPS + " fps" + (CACHE_OK ? "" : " ·"), W - 14, H - 12); g.restore(); } // temporary: frame rate check
+    if (fade > 0) { g.save(); g.font = "600 14px sans-serif"; g.fillStyle = "rgba(255,255,255,.8)"; g.textAlign = "right"; g.textBaseline = "alphabetic"; g.fillText(FPS + " fps", W - 14, H - 12); g.restore(); } // temporary: frame rate check
     const sp = document.getElementById("splash"); if (sp && fade > 0) { sp.style.opacity = String(1 - fade); if (fade >= 1) sp.remove(); }
     if (ROOM || ROOMCLOSE) { const R = ROOMS[(ROOM || ROOMCLOSE).id];
       if (R && R !== "loading") { const k = ROOM ? Math.min(1, (t - ROOM.open) / .6) : 1 - Math.min(1, (t - ROOMCLOSE.t) / .5);

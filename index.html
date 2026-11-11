@@ -129,7 +129,7 @@ function meadowStatic(night, hour) {
   // illustrated landscape of the season (img/g_land_<season>.webp); evening = a night-blue veil over it
   const land = SPR["g_land_" + SEASON];
   if (land) { const lh = W * land.height / land.width; g.drawImage(land, 0, H - lh, W, lh);
-    if (night) { g.fillStyle = "rgba(14,22,52,.55)"; g.fillRect(0, H - lh, W, lh); } }
+    if (night) { const vg = g.createLinearGradient(0, H - lh, 0, H); vg.addColorStop(0, "rgba(14,22,52,0)"); vg.addColorStop(.3, "rgba(14,22,52,.55)"); vg.addColorStop(1, "rgba(14,22,52,.55)"); g.fillStyle = vg; g.fillRect(0, H - lh, W, lh); } } // fades in from the top: no line across the night sky
   else { g.fillStyle = night ? "#16301B" : "#6DB33F"; g.fillRect(0, H * .62, W, H * .38); }
 }
 function meadowFlowers(night) { const r = rng(11);

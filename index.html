@@ -446,9 +446,27 @@ function ant(x, y, r, t, left, walk, carry) {
   g.restore();
 }
 // the current caterpillar (or egg / cocoon), small, on the perch
+// the egg's colour multiplied onto the illustrated shell, like BlendMode.Modulate in the app (made once per colour)
+const EGGT = {};
+function eggTint(im, col) { if (!CACHE_OK || col == null) return im; const k = "e" + col; if (EGGT[k]) return EGGT[k]; EGGT[k] = im;
+  const c = document.createElement("canvas"); c.width = Math.round(im.width * .5); c.height = Math.round(im.height * .5); const x = c.getContext("2d", SOFT);
+  x.drawImage(im, 0, 0, c.width, c.height); x.globalCompositeOperation = "multiply"; x.fillStyle = hex(col); x.fillRect(0, 0, c.width, c.height);
+  x.globalCompositeOperation = "destination-in"; x.drawImage(im, 0, 0, c.width, c.height); asImage(c, i => EGGT[k] = i); return im; }
+// the egg's pattern (0 dots, 1 stripes, 2 zigzag, 3 stars) inside its oval, as in drawEgg() (m = the app's size unit)
+function eggPattern(x0, y0, w, h, m, kind, spot) {
+  g.save(); g.beginPath(); g.ellipse(x0 + w / 2, y0 + h / 2, w / 2, h / 2, 0, 0, TAU); g.clip(); g.fillStyle = spot; g.strokeStyle = spot;
+  if (kind === 0) [[.3, .3], [.66, .42], [.4, .62], [.72, .74], [.24, .52], [.55, .18]].forEach(([a, b], i) => { g.beginPath(); g.arc(x0 + w * a, y0 + h * b, m * (.03 + .012 * (i % 2)), 0, TAU); g.fill(); });
+  else if (kind === 1) { g.globalAlpha *= .8; for (let k = 0; k < 3; k++) g.fillRect(x0, y0 + h * (.28 + k * .2), w, h * .07); }
+  else if (kind === 2) { g.lineWidth = m * .022; g.beginPath(); g.moveTo(x0, y0 + h * .5); for (let k = 0; k <= 8; k++) g.lineTo(x0 + w * k / 8, y0 + h * (k % 2 === 0 ? .45 : .57)); g.stroke();
+    g.beginPath(); g.arc(x0 + w * .5, y0 + h * .25, m * .025, 0, TAU); g.fill(); }
+  else for (let k = 0; k < 5; k++) { const cx = x0 + w * (.25 + (k % 3) * .25), cy = y0 + h * (.25 + Math.floor(k / 3) * .35 + (k % 2) * .1), r = m * .035;
+    g.beginPath(); for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? r * .45 : r; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); g.fill(); }
+  g.restore(); }
 function larva(p, x, base, u, t, sleep) {
-  if (p.stage === "EGG") { if (SPR.p_egg) { const h = u * 1.4, w = h * SPR.p_egg.width / SPR.p_egg.height, im = tinted(SPR.p_egg, "egg" + p.eggColor, hex(p.eggColor) + "99");
-      g.save(); g.translate(x, base); g.rotate(Math.sin(t * 3) * .05); g.drawImage(im, -w / 2, -h, w, h); g.restore(); }
+  if (p.stage === "EGG") { if (SPR.p_egg) { const h = u * 1.4, w = h * SPR.p_egg.width / SPR.p_egg.height, im = eggTint(SPR.p_egg, p.eggColor);
+      g.save(); g.translate(x, base); g.rotate(Math.sin(t * 3) * .05); g.drawImage(im, -w / 2, -h, w, h);
+      if (p.eggSpot != null) eggPattern(-w / 2, -h, w, h, h * .7, p.eggPattern | 0, hex(p.eggSpot)); // same pattern as drawEgg() in the app
+      g.restore(); }
     else fillStroke(oval(x, base - u * .7, u * .5, u * .7), grad(base - u * 1.4, base, hex(p.eggColor)), u * .06); return; }
   if (p.stage === "COCOON") { if (SPR.p_twig && SPR.p_cocoon_body) { const h = u * 2.4, w = h * SPR.p_cocoon.width / SPR.p_cocoon.height, sp = .324, px = x - w / 2 + w * .486, py = base - h + h * sp; // the twig stays still, the cocoon swings
       g.drawImage(SPR.p_twig, x - w / 2, base - h, w, h * sp); g.save(); g.translate(px, py); g.rotate(Math.sin(t) * .06); g.drawImage(SPR.p_cocoon_body, x - w / 2 - px, 0, w, h * (1 - sp)); g.restore(); }
@@ -700,7 +718,9 @@ function draw(now) {
       if (k >= 1) { ANT = null; LEAVES = LEAVES.filter(s => s[0] !== i); continue; }
       if (k >= 0) { const out = k < .5, f = out ? k * 2 : 2 - k * 2; antAt = [home[0] + (lx - home[0]) * f, home[1] + (ly - home[1]) * f]; carry = !out; left = (lx < home[0]) === out; if (!out) continue; } }
     const gl = g.createRadialGradient(lx, ly, 0, lx, ly, u * .6); gl.addColorStop(0, "rgba(255,245,157,.6)"); gl.addColorStop(1, "rgba(255,245,157,0)"); g.fillStyle = gl; g.beginPath(); g.arc(lx, ly, u * .6, 0, TAU); g.fill();
-    g.save(); g.translate(lx, ly); g.rotate((20 + i * 37) * Math.PI / 180); g.fillStyle = "#43A047"; g.strokeStyle = "rgba(43,42,38,.8)"; g.lineWidth = u * .03; g.beginPath(); g.ellipse(0, 0, u * .24, u * .12, 0, 0, TAU); g.fill(); g.stroke(); g.restore(); }
+    const lr = u * (.2 + .03 * (Math.sin(t * 3 + i) + 1) / 2); // same leaf as drawLeaf() in the app: pointed, light green, dark midrib
+    g.save(); g.translate(lx, ly); g.rotate((20 + i * 37) * Math.PI / 180); g.fillStyle = "#66BB6A"; g.beginPath(); g.moveTo(-lr, 0); g.quadraticCurveTo(0, -lr * .9, lr, 0); g.quadraticCurveTo(0, lr * .9, -lr, 0); g.closePath(); g.fill();
+    g.strokeStyle = "#2E7D32"; g.lineWidth = lr * .12; g.lineCap = "round"; g.beginPath(); g.moveTo(-lr, 0); g.lineTo(lr * .8, 0); g.stroke(); g.restore(); }
   if (antAt) ant(antAt[0], antAt[1], ua * .24, t, left, awalk || carry, carry);
   // nectar: a flower blooms where the user tapped and the butterflies gather round it for a while
   let pull = 0, nx = 0, ny = 0;
